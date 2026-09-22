@@ -1,0 +1,67 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Sticker Sheet — dipstick{% endblock %}</title>
+<meta name="description" content="{% block description %}Every animal anyone has found down a dipstick, as a sheet of die-cut stickers.{% endblock %}">
+
+<meta property="og:title" content="{% block og_title %}dipstick sticker sheet{% endblock %}">
+<meta property="og:description" content="{% block og_description %}Every animal anyone has found down a dipstick, as a sheet of die-cut stickers.{% endblock %}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+{% block og_image %}{% endblock %}
+
+<link rel="icon" href="{% static 'stickers/favicon.ico' %}?v=1">
+
+<!-- Bootstrap + Chillax are already served by dipstick.earth; hot-link them
+     rather than vendoring a second copy (same as workshops.dipstick.earth). -->
+<link rel="preconnect" href="https://dipstick.earth">
+<link rel="stylesheet" href="https://dipstick.earth/assets/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://dipstick.earth/assets/css/Chillax%20Variable.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="{% static 'stickers/css/sheet.css' %}?v={{ CSS_VERSION|default:'1' }}">
+</head>
+<body>
+
+<nav class="ss-nav">
+  <a class="ss-nav__home" href="https://dipstick.earth">
+    <img src="https://dipstick.earth/assets/img/dipstick-mark.png" alt="" width="34" height="34">
+    <span>dipstick</span>
+  </a>
+  <div class="ss-nav__links">
+    <a href="{% url 'stickers:sheet' %}">the sheet</a>
+    <a href="https://workshops.dipstick.earth">workshops</a>
+    <a href="https://wiki.dipstick.earth">wiki</a>
+    <a class="ss-btn ss-btn--yellow" href="{% url 'stickers:submit' %}">add yours</a>
+  </div>
+</nav>
+
+{% if messages %}
+<div class="ss-messages">
+  {% for message in messages %}
+    <div class="ss-message ss-message--{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% block content %}{% endblock %}
+
+<footer class="ss-footer">
+  <p>
+    Stickers made by people pointing a
+    <a href="https://dipstick.earth">dipstick</a> somewhere they couldn't put their head.
+  </p>
+  <p class="ss-footer__thin">
+    <a href="{% url 'stickers:submit' %}">Add a sticker</a> ·
+    <a href="/api/stickers/">API</a> ·
+    <a href="https://dipstick.earth/contacts.html">Contact</a>
+  </p>
+</footer>
+
+<script src="https://dipstick.earth/assets/bootstrap/js/bootstrap.min.js" defer></script>
+<script src="{% static 'stickers/js/sheet.js' %}" defer></script>
+</body>
+</html>

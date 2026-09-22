@@ -1,0 +1,61 @@
+{% extends 'stickers/base.html' %}
+{% load stickerfx %}
+
+{% block content %}
+<header class="ss-hero">
+  <h1 class="ss-hero__word">sticker<br>sheet</h1>
+  <p class="ss-hero__blurb">
+    Every animal anyone has found down a dipstick. {{ total }} sticker{{ total|pluralize }},
+    {{ species_total }} species, peeled off and stuck down as they come in.
+  </p>
+
+  <form class="ss-filter" method="get" action="{% url 'stickers:sheet' %}" role="search">
+    <input class="ss-filter__input" type="search" name="q" value="{{ query }}"
+           placeholder="search a species, a place, a person" aria-label="Search stickers">
+    <button class="ss-btn ss-btn--blue" type="submit">find</button>
+  </form>
+
+  <div class="ss-chips">
+    <a class="ss-chip {% if not active_group %}is-on{% endif %}"
+       href="{% url 'stickers:sheet' %}">all</a>
+    {% for g in groups %}
+      <a class="ss-chip {% if active_group == g.group %}is-on{% endif %}"
+         href="?group={{ g.group }}">{{ group_labels|dictkey:g.group }} <b>{{ g.n }}</b></a>
+    {% endfor %}
+  </div>
+</header>
+
+{% if stickers %}
+<main class="ss-sheet" id="sheet">
+  {% for s in stickers %}
+  <article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg">
+    <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
+      <div class="ss-sticker__die">
+        <img class="ss-sticker__img"
+             src="{% if s.lowres_url %}{{ s.lowres_url }}{% else %}{{ s.thumb_url }}{% endif %}"
+             data-full="{{ s.thumb_url }}"
+             alt="{{ s.species.common_name }}{% if s.caption %} — {{ s.caption }}{% endif %}"
+             width="640" height="640"
+             {% if forloop.counter <= 8 %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+        {% if s.is_video %}<span class="ss-sticker__play" aria-hidden="true">▶</span>{% endif %}
+      </div>
+      <h2 class="ss-sticker__name">{{ s.species.common_name }}</h2>
+      {% if s.wildlife_investigator %}
+        <p class="ss-sticker__by">{{ s.wildlife_investigator }}</p>
+      {% endif %}
+    </a>
+  </article>
+  {% endfor %}
+</main>
+{% else %}
+<main class="ss-empty">
+  <p class="ss-empty__big">Nothing on the sheet yet{% if query or active_group %} for that{% endif %}.</p>
+  {% if query or active_group %}
+    <p><a class="ss-btn ss-btn--blue" href="{% url 'stickers:sheet' %}">show everything</a></p>
+  {% else %}
+    <p>Be the first — point a dipstick at something and
+       <a href="{% url 'stickers:submit' %}">send it in</a>.</p>
+  {% endif %}
+</main>
+{% endif %}
+{% endblock %}

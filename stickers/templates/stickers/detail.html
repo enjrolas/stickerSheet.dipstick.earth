@@ -1,0 +1,79 @@
+{% extends 'stickers/base.html' %}
+{% load stickerfx %}
+
+{% block title %}{{ sticker.species.common_name }} — dipstick sticker sheet{% endblock %}
+{% block description %}{{ sticker.display_caption|default:sticker.species.common_name }}{% endblock %}
+{% block og_title %}{{ sticker.species.common_name }}{% endblock %}
+{% block og_description %}{{ sticker.display_caption|default:sticker.species.common_name }}{% endblock %}
+{% block og_image %}{% if sticker.thumb_url %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ sticker.thumb_url }}">{% endif %}{% endblock %}
+
+{% block content %}
+<main class="ss-detail">
+  <a class="ss-back" href="{% url 'stickers:sheet' %}">← the sheet</a>
+
+  <div class="ss-detail__grid">
+    <div class="ss-detail__media">
+      {% if sticker.is_video %}
+        <video class="ss-detail__video" controls playsinline
+               {% if sticker.poster_url %}poster="{{ sticker.poster_url }}"{% endif %}
+               preload="metadata">
+          <source src="{{ sticker.media.url }}">
+        </video>
+      {% else %}
+        <img class="ss-detail__img" src="{{ sticker.media.url }}"
+             alt="{{ sticker.species.common_name }}">
+      {% endif %}
+    </div>
+
+    <div class="ss-detail__meta">
+      <h1 class="ss-detail__name">{{ sticker.species.common_name }}</h1>
+      {% if sticker.species.scientific_name %}
+        <p class="ss-detail__sci">{{ sticker.species.scientific_name }}</p>
+      {% endif %}
+      {% if sticker.caption %}<p class="ss-detail__caption">{{ sticker.caption }}</p>{% endif %}
+
+      <dl class="ss-facts">
+        {% if sticker.wildlife_investigator %}
+          <dt>Found by</dt><dd>{{ sticker.wildlife_investigator }}</dd>{% endif %}
+        {% if sticker.location %}<dt>Where</dt><dd>{{ sticker.location }}</dd>{% endif %}
+        {% if sticker.captured_at %}<dt>When</dt><dd>{{ sticker.captured_at|date:"j F Y" }}</dd>{% endif %}
+        <dt>Group</dt><dd>{{ sticker.species.get_group_display }}</dd>
+      </dl>
+
+      {% if sticker.sticker_url %}
+        <div class="ss-diecut">
+          <img class="ss-diecut__img" src="{{ sticker.sticker_url }}"
+               alt="Die-cut sticker of {{ sticker.species.common_name }}"
+               width="1024" height="1024" loading="lazy">
+          <a class="ss-btn ss-btn--yellow" href="{{ sticker.sticker_url }}" download>
+            download the sticker
+          </a>
+        </div>
+      {% endif %}
+
+      {% if sticker.latitude and sticker.longitude %}
+        <iframe class="ss-map" loading="lazy" title="Map of {{ sticker.location }}"
+          src="https://www.openstreetmap.org/export/embed.html?bbox={{ sticker.longitude|add:'-0.02'|stringformat:'s' }}%2C{{ sticker.latitude|add:'-0.02'|stringformat:'s' }}%2C{{ sticker.longitude|add:'0.02'|stringformat:'s' }}%2C{{ sticker.latitude|add:'0.02'|stringformat:'s' }}&amp;marker={{ sticker.latitude }}%2C{{ sticker.longitude }}"></iframe>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if more %}
+  <section class="ss-more">
+    <h2 class="ss-more__title">More {{ sticker.species.common_name }}</h2>
+    <div class="ss-sheet ss-sheet--tight">
+      {% for s in more %}
+      <article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg">
+        <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
+          <div class="ss-sticker__die">
+            <img class="ss-sticker__img" src="{{ s.thumb_url }}" loading="lazy"
+                 alt="{{ s.species.common_name }}" width="640" height="640">
+          </div>
+        </a>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'stickers/base.html' %}
+
+{% block title %}Add a sticker — dipstick sticker sheet{% endblock %}
+
+{% block content %}
+<main class="ss-form-page">
+  <a class="ss-back" href="{% url 'stickers:sheet' %}">← the sheet</a>
+  <h1 class="ss-hero__word ss-hero__word--small">add a<br>sticker</h1>
+  <p class="ss-hero__blurb">
+    Send a photo or a clip of whatever you found. We turn it into a die-cut
+    sticker and stick it on the sheet once someone has had a look at it.
+  </p>
+
+  <form class="ss-form" method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {{ form.website }}
+
+    {% if form.non_field_errors %}
+      <div class="ss-message ss-message--error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% for field in form.visible_fields %}
+      <div class="ss-field">
+        <label class="ss-field__label" for="{{ field.id_for_label }}">
+          {{ field.label }}{% if field.field.required %} <span class="ss-req">*</span>{% endif %}
+        </label>
+        {{ field }}
+        {% if field.help_text %}
+          <p class="ss-field__help">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}
+          <p class="ss-field__error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+
+    <button class="ss-btn ss-btn--yellow ss-btn--big" type="submit">send it in</button>
+  </form>
+</main>
+{% endblock %}

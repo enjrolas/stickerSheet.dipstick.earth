@@ -1,0 +1,17 @@
+{% extends 'stickers/base.html' %}
+
+{% block title %}Thanks — dipstick sticker sheet{% endblock %}
+
+{% block content %}
+<main class="ss-empty">
+  <p class="ss-empty__big">In the queue.</p>
+  <p>
+    Someone will look at it shortly. Once it is approved your sticker joins
+    the sheet, die-cut and downloadable.
+  </p>
+  <p>
+    <a class="ss-btn ss-btn--blue" href="{% url 'stickers:sheet' %}">back to the sheet</a>
+    <a class="ss-btn ss-btn--yellow" href="{% url 'stickers:submit' %}">send another</a>
+  </p>
+</main>
+{% endblock %}

@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*~
+.DS_Store
+
+# Real secrets + prod flags. Template is local_settings.py.example.
+stickersheet/local_settings.py
+
+# Uploads and their derivatives are data, not source.
+media/
+staticfiles/
+
+*.log
+db.sqlite3
