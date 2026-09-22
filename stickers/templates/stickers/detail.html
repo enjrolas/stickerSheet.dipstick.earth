@@ -63,14 +63,7 @@
     <h2 class="ss-more__title">More {{ sticker.species.common_name }}</h2>
     <div class="ss-sheet ss-sheet--tight">
       {% for s in more %}
-      <article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg">
-        <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
-          <div class="ss-sticker__die">
-            <img class="ss-sticker__img" src="{{ s.thumb_url }}" loading="lazy"
-                 alt="{{ s.species.common_name }}" width="640" height="640">
-          </div>
-        </a>
-      </article>
+        {% include 'stickers/_sticker_card.html' with show_name=False %}
       {% endfor %}
     </div>
   </section>

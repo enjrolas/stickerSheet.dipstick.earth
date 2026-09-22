@@ -17,7 +17,44 @@ Project `stickersheet`, one app `stickers`:
   free-text `location` (geocoded), `captured_at`, and a `status` of pending/published/rejected.
 
 Pages: `/` the sheet, `/sticker/<slug>/`, `/species/<slug>/`, `/submit/`.
-API: `/api/stickers/`, `/api/species/`, `/api/submit/`.
+
+API:
+
+| Endpoint | What |
+| --- | --- |
+| `GET /api/stickers/` | published stickers; `?species= ?group= ?kind= ?q=` |
+| `GET /api/stickers/<slug>/` | one sticker |
+| `GET /api/stickers/<slug>/svg/` | **that sticker as an SVG file** |
+| `GET /api/species/` | species with at least one published sticker |
+| `GET /api/shapes/` | the ten die-cut outlines, with their raw path data |
+| `POST /api/submit/` | open, throttled `12/hour`, always lands pending |
+
+## Deleting a sticker is soft — and must stay that way
+
+**A submitted photo is the only copy.** On 2026-09-22 a cleanup ran
+`Sticker.objects.all().delete()` against the live database and destroyed a real submission and
+its file along with two test rows. Soft delete exists so that cannot happen again.
+
+- `Sticker.objects` — the default manager, **live rows only**.
+- `Sticker.all_objects` — everything, including the bin. Used by the admin and for restores.
+- `.delete()`, on an instance or a queryset, stamps `deleted_at` and **returns without touching
+  the file**. `Sticker.objects.all().delete()` is now harmless.
+- `.restore()` clears it. `.hard_delete()` really removes the row, and only
+  `hard_delete(delete_file=True)` ever unlinks an upload.
+- `Meta.base_manager_name = 'all_objects'` so FK traversal still resolves for a binned row.
+
+**The trap, if you add a query:** an annotation or a `filter()` that *joins* to stickers runs in
+SQL and does **not** go through the manager, so it will happily count rows in the bin. Those
+joins have to spell out `stickers__deleted_at__isnull=True` by hand — see `api.SpeciesViewSet`
+and `views.sheet`. `test_counts_ignore_binned_stickers` covers it.
+
+In the admin, the changelist reads from `all_objects` and a **Bin** filter hides deleted rows by
+default; switch it to "In the bin" to see and restore them. The built-in "Delete selected" is
+soft. The Restore action resolves its selection from the POST rather than the filtered queryset,
+because on the default view the binned rows are not in that queryset at all.
+
+**There is still no database backup.** Soft delete protects against an accidental delete, not
+against a dropped table or a disk failure.
 
 ## Moderation is the whole security model
 
@@ -92,13 +129,92 @@ GRANT ALL PRIVILEGES ON `test_stickerSheet`.* TO 'stickerSheet'@'%'; FLUSH PRIVI
 The SQLite route is fast and covers the logic, but it will **not** catch MySQL-specific problems
 (collation, strict-mode rejections, index length). Prefer the grant before any schema change.
 
+## Die-cut outlines — `stickers/shapes/`
+
+Ten hand-drawn SVG silhouettes (soft rectangle, capsule, scalloped badge, cloud blob, wobbly
+oval, splat, three bursts, melted label), each a 512x512 viewBox with one closed path
+`id="sticker-shape"`. **A sticker is cropped to one of these**, and that is what makes it a
+sticker rather than a photo in a box.
+
+`stickers/shapes.py` parses them itself — they only use `M`/`L`/`C`/`Z`, so it flattens the
+cubics and fills the polygon with Pillow rather than depending on cairosvg (needs libcairo) or
+ImageMagick's flaky SVG delegate. **If a new outline uses arcs (`A`) or quadratics (`Q`) the
+parser silently skips the command and the shape comes out wrong** — add the case.
+
+`shapes.mask(pts, size, inset=N)` does a **true uniform inset**, by re-stroking the filled
+polygon in black at `2N` wide. Two things here were learned the hard way and are covered by
+`test_inset_eats_inward_everywhere`:
+
+- The first version scaled the polygon toward its centroid. On a starburst that *shortens* the
+  spikes instead of thinning them, so the photo reached right into the points and there was no
+  white border there. A uniform inset eats the narrow wedges away entirely — which is why the
+  inset bounding box is much smaller than the outline's on spiky shapes. That is correct.
+- The stroke runs over a **decimated** copy of the polyline. Curve flattening leaves points a
+  fraction of a pixel apart, and Pillow's wide-line renderer degenerates on a near-zero-length
+  segment — it throws black spurs out across the border. Dropping points closer than ~2px fixes
+  it. Don't remove `_decimate`.
+
+`Sticker.shape` picks the outline; blank means auto, derived from the pk so it is stable across
+rebuilds and spreads the ten shapes down the sheet. The admin dropdown is built from the files on
+disk (`formfield_for_dbfield`), so **dropping a new SVG into `stickers/shapes/` needs no
+migration** — just rerun `build_shape_masks` and `collectstatic`.
+
+## Cropping video and GIFs — why there are two mechanisms
+
+Pillow cannot crop a moving image, so the outline is applied twice, from the same source SVG:
+
+| Where | How | Covers |
+| --- | --- | --- |
+| The downloadable `.sticker.png` | Pillow, server-side, per upload | stills only (a video uses its poster frame) |
+| The gallery card | CSS `mask-image`, in the browser | photo, **animated GIF and video** alike |
+
+`manage.py build_shape_masks` writes both static files the gallery needs into
+`stickers/static/stickers/shapes/`: `<slug>.svg` (painted behind the media as the white vinyl
+border) and `<slug>.mask.png` (the inset silhouette the media is clipped to). **Rerun it after
+touching a shape, then `collectstatic`** — otherwise the moving stickers and the downloadable
+PNGs drift apart.
+
+The card markup lives in one partial, `templates/stickers/_sticker_card.html`, included by the
+sheet, species and detail pages. It picks the element by media type: `<video>` for video (source
+attached and played only while on screen, by `sheet.js`), a plain `<img>` pointing at the
+**original** file for a GIF (a thumbnail would freeze it), and the LQIP-then-thumbnail dance for
+a photo. `Sticker.is_gif` is extension-based because a GIF is stored as `media_kind=image`.
+
+The hard offset shadow is `filter: drop-shadow(...)` rather than `box-shadow`, so it follows the
+die-cut alpha instead of tracing a rectangle. There is an `@supports not (mask-image:...)`
+fallback to a rounded corner for older engines.
+
+## Serving a sticker as SVG — `stickers/svg.py`
+
+`GET /api/stickers/<slug>/svg/` returns `image/svg+xml`:
+
+- `?embed=1` inlines the artwork as a base64 data URI, so the file stands alone
+  (~197 KB). Without it the `<image>` links back to this server (~1.9 KB).
+- `?download=1` adds `Content-Disposition: attachment`.
+- A video embeds its **poster frame** — SVG `<image>` cannot play video.
+- Only published stickers resolve; a pending one 404s, same as every other read path.
+
+**The SVG and the PNG must stay cut with the identical outline** — they sit next to each other on
+the detail page. `test_svg_uses_the_same_outline_as_the_png` pins that.
+
+Both get their uniform border the same way, and it is not obvious: **clip to the outline, then
+stroke that same outline from inside the clip.** Half the stroke falls outside and is clipped
+away, leaving exactly `width / 2` lying inside the edge. That is why the stroked paths live
+inside the `<g clip-path=...>` — move them out and half the border hangs past the die-cut edge.
+`test_border_is_stroked_inside_the_clip` guards it. (Pillow does the same thing with
+`draw.line` over the filled polygon; see the shapes section.)
+
+`/api/shapes/` reads the SVGs off disk and returns each outline's `slug`, `label`, static `svg`
+and `mask_png` URLs, and its raw `path` data — so a client can draw the silhouette itself. A new
+outline appears there with no migration and no code change.
+
 ## Derivative-file pipeline (non-obvious)
 
 `Sticker.media` writes derivatives **alongside the original** in `media/captures/<year>/<month>/`:
 
 | Derivative | Purpose | Tool |
 | --- | --- | --- |
-| `<base>.sticker.png` | the die-cut sticker — transparent, white vinyl border, ink keyline | Pillow |
+| `<base>.sticker.png` | the die-cut sticker — transparent, cut to the shape | Pillow |
 | `<base>.thumb.jpg` | 640px square grid thumbnail | Pillow |
 | `<base>.lowres.jpg` | 32px LQIP placeholder, unblurred by `sheet.js` | Pillow |
 | `<base>.poster.jpg` | video only: frame at 1s, then fed through the three above | ffmpeg |
@@ -106,7 +222,7 @@ The SQLite route is fast and covers the logic, but it will **not** catch MySQL-s
 Pattern, same as workshops.dipstick.earth's carousel:
 - Built synchronously in `Sticker.save()`. A video takes a few seconds (ffmpeg).
 - Each `*_url` property **lazily rebuilds** if the file is missing, which backfills anything that
-  failed to write (e.g. saved as the wrong user).
+  failed to write.
 - Errors are swallowed (`except Exception: pass`) so a corrupt upload can't 500 the submit form;
   the property returns `''` and templates fall back to the original.
 
@@ -116,10 +232,6 @@ snapshot, because `upload_to` rewrites the name during the first save and `__ini
 snapshotted the incoming value — both would compare equal and a new row would never build
 derivatives or geocode. `test_derivatives_are_built_on_save` and
 `test_location_is_geocoded_once` cover this.
-
-To rebuild by hand, use the admin action "Rebuild sticker PNG / thumbnails", or in a shell
-`s.build_derivatives()`. **Run it as the user that owns `media/`** — as with the workshops site,
-a permissions failure is swallowed silently.
 
 ## Geocoding
 
@@ -157,11 +269,42 @@ gunicorn and no separate unit to babysit.
 engine off, strips handlers and forces `text/plain` on anything script-shaped. The form only
 accepts image/video extensions; that block is the second lock, not the first. **Don't drop it.**
 
-## Filesystem permissions
+## Filesystem permissions — this caused a live 500
 
-`media/` and `staticfiles/` are group `www-data` and group-writable — apache writes uploads and
-their derivatives. `local_settings.py` is `japhy:www-data` `640`. Anything that resets these to
-`japhy:japhy` breaks uploads or boots the app into dev settings.
+Uploads are written by **apache (`www-data`)** for a public submission and by **`japhy`** for a
+shell import, and both have to be able to write the same tree. Getting this wrong fails in the
+worst way: `build_derivatives()` swallows the error, so it goes quiet rather than loud.
+
+The 500 that actually happened: `media/` was `japhy:www-data` `775`, but the dated subdirectories
+`media/captures/2026/09/` had been created from a shell as `japhy:japhy` `755`, so apache could
+not write into them. `PermissionError: [Errno 13]` on the first real form submission.
+
+Three things keep it fixed — **all three matter**:
+
+1. On disk, `media/` and everything under it is group `www-data`, group-writable, and carries the
+   **setgid bit** so newly created subdirectories stay group `www-data`:
+   `chgrp -R www-data media && chmod -R g+w media && find media -type d -exec chmod g+s {} \;`
+2. `FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o775` and `FILE_UPLOAD_PERMISSIONS = 0o664` in
+   settings, so the dated directories Django creates are group-writable from the start.
+3. `imaging.DERIVATIVE_MODE = 0o664`, chmodded onto every derivative after it is written.
+   Pillow and ffmpeg go through the process umask and land `0644`, which would leave files the
+   *other* user could never overwrite.
+
+`local_settings.py` is `japhy:www-data` `640`. `staticfiles/` is group `www-data`.
+
+## Logging — where a 500 actually goes
+
+Django's default `LOGGING` only mails `ADMINS`. With `DEBUG = False` and no mail configured, a
+500 leaves **no traceback anywhere** — the apache error log shows only mod_wsgi chatter, which
+is exactly how the permissions bug above hid. `settings.py` therefore defines a `LOGGING` dict
+writing `django.request` at ERROR to:
+
+```
+/home/japhy/logs/stickersheet-django.log
+```
+
+(rotating, 5 MB x 3). That file is `japhy:www-data` `664` — **apache must be able to write it**,
+or the handler itself throws on startup. Check it first when something 500s.
 
 ## Cross-origin assets
 
@@ -188,10 +331,19 @@ Stickers sit at a tilt derived from the pk (`stickerfx.tilt`) so the angle is st
 reloads; hover straightens and lifts them. `prefers-reduced-motion` drops the tilt and
 transitions entirely.
 
+## Django template comments — `{# #}` is single-line only
+
+**A multi-line `{# ... #}` is not a comment at all.** Django only recognises it within one line;
+spread it over three and the entire block renders as visible text on the page. That shipped to
+the live sheet once, from the top of `_sticker_card.html`. Use `{% comment %} ... {% endcomment %}`
+for anything longer than a line. `test_no_multiline_hash_comments_in_templates` scans every
+template for it.
+
 ## Still to do
 
 - Nothing seeds the sheet yet — it is empty by design; the first real submissions fill it.
-- The HTML submit form has no rate limit (the API one does).
+- The HTML submit form has no rate limit (the API one does, `12/hour`).
+- Video is served as uploaded — there is no compressed/`+faststart` derivative like the workshops
+  carousel builds. A long phone clip will be slow on the sheet.
 - `SECURE_HSTS_SECONDS` is unset, so `check --deploy` warns. Enable only deliberately — HSTS is
-  hard to walk back, and it would apply to the whole `dipstick.earth` tree if set with
-  `includeSubDomains`.
+  hard to walk back and would apply to the whole `dipstick.earth` tree with `includeSubDomains`.

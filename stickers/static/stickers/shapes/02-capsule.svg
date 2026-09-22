@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Capsule sticker outline</title>
+  <desc id="desc">A wide pill-shaped sticker with a subtle hand-drawn asymmetry.</desc>
+  <path id="sticker-shape" d="M142 108C84 109 45 148 43 207L41 292C40 353 82 396 145 399L368 402C429 402 469 361 470 302L471 215C470 154 429 112 367 110L142 108Z" fill="#fff" stroke="#111" stroke-width="12" stroke-linejoin="round"/>
+</svg>

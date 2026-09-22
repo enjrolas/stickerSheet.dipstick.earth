@@ -133,41 +133,67 @@ a:hover { color: var(--ink); }
 .ss-sticker { --tilt: 0deg; }
 .ss-sticker__link { text-decoration: none; color: var(--ink); display: block; }
 
-/* The die-cut: white vinyl border, hard shadow, kissed onto the page at a
-   slight angle. Straightens and lifts on hover, like peeling it up. */
+/* The die-cut.
+   Two layers do the cropping: the shape SVG paints the white vinyl + ink
+   keyline as a background, and the media on top is clipped by an inset
+   silhouette via `mask-image`. Doing it in CSS rather than in Pillow is what
+   lets a VIDEO or an animated GIF carry the same cut edge as a photo — the
+   server cannot rasterise a moving image into a PNG.
+   The drop-shadow filter follows the alpha, so the hard offset shadow traces
+   the real outline instead of a rectangle. */
 .ss-sticker__die {
   position: relative;
   aspect-ratio: 1;
-  border: 7px solid #fff;
-  border-radius: 22%;
-  outline: 2px solid var(--ink);
-  outline-offset: -1px;
-  overflow: hidden;
-  background: var(--paper-deep);
-  box-shadow: var(--pop);
+  background-image: var(--shape);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(5px 5px 0 var(--ink));
   transform: rotate(var(--tilt));
-  transition: transform .18s ease, box-shadow .18s ease;
+  transition: transform .18s ease, filter .18s ease;
 }
 .ss-sticker__link:hover .ss-sticker__die,
 .ss-sticker__link:focus-visible .ss-sticker__die {
   transform: rotate(0deg) translate(-3px, -3px) scale(1.03);
-  box-shadow: 10px 10px 0 var(--ink);
+  filter: drop-shadow(9px 9px 0 var(--ink));
 }
-.ss-sticker__img {
-  width: 100%; height: 100%; object-fit: cover; display: block;
+
+.ss-sticker__media {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  -webkit-mask-image: var(--shape-mask);
+          mask-image: var(--shape-mask);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
   /* LQIP starts blurred; sheet.js swaps in the real thumb and clears this */
-  filter: blur(8px); transform: scale(1.06);
+  filter: blur(8px); transform: scale(1.04);
   transition: filter .35s ease, transform .35s ease;
 }
-.ss-sticker__img.is-loaded { filter: none; transform: none; }
+.ss-sticker__media.is-loaded { filter: none; transform: none; }
 
-.ss-sticker__play {
-  position: absolute; right: 8px; bottom: 8px;
-  width: 30px; height: 30px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--yellow); border: 2px solid var(--ink);
-  font-size: .72rem; color: var(--ink); padding-left: 2px;
+/* No mask support (older Safari/Firefox builds): fall back to a round-ish
+   clip rather than showing the media as a bare square over the outline. */
+@supports not ((mask-image: url('')) or (-webkit-mask-image: url(''))) {
+  .ss-sticker__media { border-radius: 22%; }
+  .ss-sticker__die { background-image: none; }
 }
+
+/* A small corner mark so a moving sticker is identifiable before it plays. */
+.ss-sticker__moving {
+  position: absolute; right: 6%; bottom: 6%;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--yellow); border: 2px solid var(--ink);
+  pointer-events: none;
+}
+.ss-sticker__moving::after {
+  content: ''; position: absolute; top: 50%; left: 54%;
+  transform: translate(-50%, -50%);
+  border-left: 7px solid var(--ink);
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+.ss-sticker--playing .ss-sticker__moving { opacity: 0; transition: opacity .2s; }
 
 .ss-sticker__name {
   font-family: var(--display); font-weight: 700; font-size: 1.05rem;
@@ -286,5 +312,5 @@ a:hover { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
   .ss-sticker__die { transform: none; }
-  .ss-sticker__img { filter: none; transform: none; }
+  .ss-sticker__media { filter: none; transform: none; }
 }

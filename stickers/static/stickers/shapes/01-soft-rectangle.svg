@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Soft rectangle sticker outline</title>
+  <desc id="desc">A plump rounded rectangular label with softly uneven sides.</desc>
+  <path id="sticker-shape" d="M112 62C76 64 55 91 57 128L63 382C64 423 89 448 130 449L385 445C426 444 449 420 448 378L443 130C442 88 418 65 377 64L112 62Z" fill="#fff" stroke="#111" stroke-width="12" stroke-linejoin="round"/>
+</svg>

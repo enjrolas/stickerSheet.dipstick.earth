@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Classic starburst sticker outline</title>
+  <desc id="desc">A balanced sixteen-point promotional starburst.</desc>
+  <path id="sticker-shape" d="M256 38L279 111L329 52L334 129L402 91L377 164L454 151L406 212L482 224L414 260L482 296L406 308L454 369L377 356L402 429L334 391L329 468L279 409L256 482L233 409L183 468L178 391L110 429L135 356L58 369L106 308L30 296L98 260L30 224L106 212L58 151L135 164L110 91L178 129L183 52L233 111L256 38Z" fill="#fff" stroke="#111" stroke-width="12" stroke-linejoin="round"/>
+</svg>

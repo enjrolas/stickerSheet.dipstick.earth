@@ -28,23 +28,7 @@
 {% if stickers %}
 <main class="ss-sheet" id="sheet">
   {% for s in stickers %}
-  <article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg">
-    <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
-      <div class="ss-sticker__die">
-        <img class="ss-sticker__img"
-             src="{% if s.lowres_url %}{{ s.lowres_url }}{% else %}{{ s.thumb_url }}{% endif %}"
-             data-full="{{ s.thumb_url }}"
-             alt="{{ s.species.common_name }}{% if s.caption %} — {{ s.caption }}{% endif %}"
-             width="640" height="640"
-             {% if forloop.counter <= 8 %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
-        {% if s.is_video %}<span class="ss-sticker__play" aria-hidden="true">▶</span>{% endif %}
-      </div>
-      <h2 class="ss-sticker__name">{{ s.species.common_name }}</h2>
-      {% if s.wildlife_investigator %}
-        <p class="ss-sticker__by">{{ s.wildlife_investigator }}</p>
-      {% endif %}
-    </a>
-  </article>
+    {% include 'stickers/_sticker_card.html' %}
   {% endfor %}
 </main>
 {% else %}

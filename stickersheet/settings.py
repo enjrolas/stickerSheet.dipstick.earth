@@ -103,6 +103,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
+# Uploads land in media/captures/<year>/<month>/, and those directories get
+# created on the fly — by apache for a public submission, by `japhy` for a
+# shell import. Without these, Django makes them 0o700/0o600 minus the umask
+# and whichever user did NOT create them can no longer write there. That is a
+# real 500 this site already hit: media/ itself was group-writable but the
+# dated subdirectories underneath were not.
+# The dirs also carry the setgid bit on disk so new ones stay group www-data.
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o775
+FILE_UPLOAD_PERMISSIONS = 0o664
+
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -139,6 +149,35 @@ STICKER_BORDER_RATIO = 0.055  # vinyl border as a fraction of the sticker size
 
 # Nominatim asks for a contactable UA on every request.
 GEOCODER_USER_AGENT = 'stickerSheet.dipstick.earth (alex@alexhornstein.com)'
+
+# Django's default logging only mails ADMINS, so with DEBUG=False and no
+# mail configured a 500 leaves NO traceback anywhere — the apache log shows
+# only mod_wsgi chatter. Write tracebacks to a file instead.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': '/home/japhy/logs/stickersheet-django.log',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django.request': {'handlers': ['file'], 'level': 'ERROR',
+                           'propagate': False},
+        'stickers': {'handlers': ['file'], 'level': 'INFO', 'propagate': False},
+    },
+}
 
 try:
     from .local_settings import *  # noqa: F401,F403

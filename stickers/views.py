@@ -28,10 +28,15 @@ def sheet(request):
             | Q(location__icontains=query)
             | Q(wildlife_investigator__icontains=query))
 
+    # These joins bypass Sticker's soft-delete manager, so the deleted_at
+    # condition is spelled out explicitly. Without it the chips count
+    # stickers that are in the bin.
+    live_published = Q(stickers__status=Sticker.Status.PUBLISHED,
+                       stickers__deleted_at__isnull=True)
     groups = (Species.objects
-              .filter(stickers__status=Sticker.Status.PUBLISHED)
+              .filter(live_published)
               .values('group')
-              .annotate(n=Count('stickers'))
+              .annotate(n=Count('stickers', filter=live_published))
               .order_by('-n'))
 
     return render(request, 'stickers/sheet.html', {
@@ -42,7 +47,7 @@ def sheet(request):
         'query': query,
         'total': _published().count(),
         'species_total': Species.objects.filter(
-            stickers__status=Sticker.Status.PUBLISHED).distinct().count(),
+            live_published).distinct().count(),
     })
 
 

@@ -1,0 +1,36 @@
+{% load stickerfx %}{% comment %}
+One sticker on the sheet. The outline crops the media: the SVG sits behind as
+the vinyl border, the inset mask clips the media itself, so a video and a GIF
+get the same die-cut edge as a photo.
+
+{% comment %}, not {# #} -- Django's {# #} is single-line only, and a
+multi-line one is not treated as a comment at all: it renders as page text.
+{% endcomment %}
+<article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg;
+    --shape: url('{{ s.shape_svg_url }}'); --shape-mask: url('{{ s.shape_mask_url }}')">
+  <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
+    <div class="ss-sticker__die">
+      {% if s.is_video %}
+        <video class="ss-sticker__media" muted loop playsinline preload="none"
+               {% if s.poster_url %}poster="{{ s.poster_url }}"{% endif %}
+               data-src="{{ s.media.url }}" aria-label="{{ s.species.common_name }}"></video>
+      {% elif s.is_gif %}
+        <img class="ss-sticker__media is-loaded" src="{{ s.media.url }}"
+             alt="{{ s.species.common_name }}{% if s.caption %} — {{ s.caption }}{% endif %}"
+             loading="lazy">
+      {% else %}
+        <img class="ss-sticker__media"
+             src="{% if s.lowres_url %}{{ s.lowres_url }}{% else %}{{ s.thumb_url }}{% endif %}"
+             data-full="{{ s.thumb_url }}"
+             alt="{{ s.species.common_name }}{% if s.caption %} — {{ s.caption }}{% endif %}"
+             width="640" height="640"
+             {% if forloop.counter <= 8 %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+      {% endif %}
+      {% if s.is_animated %}<span class="ss-sticker__moving" aria-hidden="true"></span>{% endif %}
+    </div>
+    {% if show_name|default_if_none:True %}
+      <h2 class="ss-sticker__name">{{ s.species.common_name }}</h2>{% endif %}
+    {% if s.wildlife_investigator %}
+      <p class="ss-sticker__by">{{ s.wildlife_investigator }}</p>{% endif %}
+  </a>
+</article>

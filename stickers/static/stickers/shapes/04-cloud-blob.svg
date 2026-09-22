@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Cloud blob sticker outline</title>
+  <desc id="desc">A friendly cloud-like organic sticker with five rounded lobes.</desc>
+  <path id="sticker-shape" d="M106 354C54 334 38 283 67 244C46 190 83 143 137 147C160 91 222 79 260 119C300 75 369 91 382 150C438 146 472 195 448 244C483 280 466 342 411 356C400 414 339 437 294 400C255 444 188 431 171 378C144 385 122 378 106 354Z" fill="#fff" stroke="#111" stroke-width="12" stroke-linejoin="round"/>
+</svg>

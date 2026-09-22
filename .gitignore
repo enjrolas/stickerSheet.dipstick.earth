@@ -5,11 +5,19 @@ __pycache__/
 .DS_Store
 
 # Real secrets + prod flags. Template is local_settings.py.example.
+# NEVER commit this: it holds SECRET_KEY and the MySQL password.
 stickersheet/local_settings.py
+local_settings.py
+.env
+*.pem
+*.key
+*.cnf
 
-# Uploads and their derivatives are data, not source.
+# Uploads and their derivatives are data, not source — and submitted photos
+# are other people's, so they do not belong in a public repo.
 media/
 staticfiles/
 
 *.log
+*.sqlite3
 db.sqlite3

@@ -10,12 +10,54 @@ import os
 
 from django.conf import settings
 from django.db import models
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
-from . import imaging
+from . import imaging, shapes
 from .geocode import geocode
+
+
+class StickerQuerySet(models.QuerySet):
+    """
+    Deleting a Sticker hides it; it does not destroy it.
+
+    A sticker is somebody's photograph, and the upload is the only copy — once
+    the file is unlinked it is gone. `.delete()` therefore stamps `deleted_at`
+    and leaves both the row and the file alone. Use `.hard_delete()` when you
+    genuinely mean it.
+    """
+
+    def delete(self):
+        return self.update(deleted_at=timezone.now())
+
+    def hard_delete(self):
+        """Really remove the rows. Does NOT touch the files on disk."""
+        return super().delete()
+
+    def alive(self):
+        return self.filter(deleted_at__isnull=True)
+
+    def dead(self):
+        return self.filter(deleted_at__isnull=False)
+
+    def restore(self):
+        return self.update(deleted_at=None)
+
+
+class StickerManager(models.Manager):
+    """The default manager: soft-deleted stickers are invisible."""
+
+    def get_queryset(self):
+        return StickerQuerySet(self.model, using=self._db).alive()
+
+
+class AllStickerManager(models.Manager):
+    """Everything, including the bin. Used by the admin and for restores."""
+
+    def get_queryset(self):
+        return StickerQuerySet(self.model, using=self._db)
 
 
 class Species(models.Model):
@@ -57,7 +99,8 @@ class Species(models.Model):
 
     @property
     def published_count(self):
-        return self.stickers.filter(status=Sticker.Status.PUBLISHED).count()
+        return self.stickers.filter(
+            status=Sticker.Status.PUBLISHED, deleted_at__isnull=True).count()
 
 
 def upload_to(instance, filename):
@@ -105,13 +148,29 @@ class Sticker(models.Model):
         help_text='Optional, private. Never rendered in a template.')
     moderator_note = models.TextField(blank=True)
 
+    shape = models.CharField(
+        max_length=40, blank=True, default='',
+        help_text='Die-cut outline. Leave on auto to spread the shapes evenly '
+                  'across the sheet.')
+
     slug = models.SlugField(max_length=160, unique=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Soft delete. Null means live. Nothing in the app ever clears this except
+    # an explicit restore, and no code path unlinks the media file.
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    objects = StickerManager()          # live rows only — the default
+    all_objects = AllStickerManager()   # includes the bin
+
     class Meta:
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['status', '-created_at'])]
+        indexes = [models.Index(fields=['status', '-created_at']),
+                   models.Index(fields=['deleted_at'])]
+        # Related lookups and FK integrity must see every row, or a
+        # soft-deleted sticker would look like a dangling reference.
+        base_manager_name = 'all_objects'
 
     def __str__(self):
         return '%s (%s)' % (self.species, self.wildlife_investigator or 'anon')
@@ -203,11 +262,28 @@ class Sticker(models.Model):
                                 settings.STICKER_LOWRES_WIDTH)
             imaging.make_diecut(source, self._derivative_path('.sticker.png'),
                                 settings.STICKER_PNG_SIZE,
-                                settings.STICKER_BORDER_RATIO)
+                                settings.STICKER_BORDER_RATIO,
+                                shape=self.resolved_shape)
         except Exception:
             # A corrupt upload must not 500 the submit form. The properties
             # below fall back to the original file.
             pass
+
+    @property
+    def resolved_shape(self):
+        """
+        The outline to cut this sticker with.
+
+        An explicit `shape` wins. Otherwise one is picked from the pk, which
+        keeps it stable across rebuilds and spreads the ten shapes evenly down
+        the sheet instead of clustering.
+        """
+        if self.shape:
+            return self.shape
+        available = shapes.available()
+        if not available or not self.pk:
+            return None
+        return available[self.pk % len(available)][0]
 
     def _lazy(self, suffix, builder_needed=True):
         path = self._derivative_path(suffix)
@@ -252,6 +328,69 @@ class Sticker(models.Model):
             parts.append('in %s' % self.location)
         return ', '.join(parts)
 
+    def delete(self, using=None, keep_parents=False):
+        """Soft delete: stamp the row, keep the file. See StickerQuerySet."""
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['deleted_at', 'updated_at'])
+        return (0, {})
+
+    def hard_delete(self, using=None, delete_file=False):
+        """
+        Really destroy the row. Only ever call this deliberately.
+
+        `delete_file=True` also unlinks the upload and its derivatives, which
+        is irreversible — there is no other copy of a submitted photo.
+        """
+        if delete_file and self.media:
+            base, _ = os.path.splitext(self.media.path)
+            for suffix in ('.sticker.png', '.thumb.jpg', '.lowres.jpg',
+                           '.poster.jpg'):
+                try:
+                    os.remove(base + suffix)
+                except OSError:
+                    pass
+            try:
+                os.remove(self.media.path)
+            except OSError:
+                pass
+        return models.Model.delete(self, using=using)
+
+    def restore(self):
+        self.deleted_at = None
+        self.save(update_fields=['deleted_at', 'updated_at'])
+
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
+
     @property
     def is_video(self):
         return self.media_kind == self.MediaKind.VIDEO
+
+    @property
+    def is_gif(self):
+        """A GIF is stored as an IMAGE (Pillow reads frame 1 for the thumb)
+        but it has to be rendered as the original file to keep moving."""
+        return (self.media.name or '').lower().endswith('.gif')
+
+    @property
+    def is_animated(self):
+        return self.is_video or self.is_gif
+
+    # --- the die-cut outline ---------------------------------------------
+    # Pillow crops the still derivatives server-side, but a video or a GIF has
+    # to be cropped in the browser. Both files below are static, built by
+    # `manage.py build_shape_masks` from the same SVG the PNG was cut with, so
+    # the moving sticker and the downloadable one have identical edges.
+
+    @property
+    def shape_svg_url(self):
+        """The outline drawn behind the media as the white vinyl border."""
+        slug = self.resolved_shape
+        return static('stickers/shapes/%s.svg' % slug) if slug else ''
+
+    @property
+    def shape_mask_url(self):
+        """Inset alpha silhouette, for the CSS `mask-image` on the media."""
+        slug = self.resolved_shape
+        return static('stickers/shapes/%s.mask.png' % slug) if slug else ''

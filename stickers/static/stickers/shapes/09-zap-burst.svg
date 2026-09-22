@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Zap burst sticker outline</title>
+  <desc id="desc">A chunky angular burst with alternating long and short points.</desc>
+  <path id="sticker-shape" d="M256 42L292 132L364 66L356 163L451 131L397 213L492 222L403 263L482 316L384 312L426 402L339 355L326 458L268 373L218 467L197 365L113 419L149 324L49 337L125 272L25 239L124 218L57 141L153 166L134 68L211 134L256 42Z" fill="#fff" stroke="#111" stroke-width="12" stroke-linejoin="round"/>
+</svg>

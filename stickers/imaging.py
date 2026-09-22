@@ -14,6 +14,15 @@ import subprocess
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps
 
+from . import shapes
+
+# Derivatives are written by whichever user is running: apache (www-data) for
+# a public submission, `japhy` for a shell rebuild. Pillow and ffmpeg both go
+# through the process umask and land 0644, which means the OTHER user can then
+# never overwrite them — and build_derivatives() swallows the failure, so it
+# fails silently. Group-writable keeps both able to rebuild.
+DERIVATIVE_MODE = 0o664
+
 VIDEO_EXTENSIONS = {'.mp4', '.mov', '.m4v', '.webm', '.avi', '.mkv', '.3gp'}
 
 # The mask is drawn this many times oversized and then downsampled, which is
@@ -22,6 +31,15 @@ SUPERSAMPLE = 4
 
 INK = (20, 18, 16, 255)      # --ink from style-sticker.css
 VINYL = (255, 255, 255, 255)
+
+
+def _finalize(path):
+    """chmod a freshly written derivative so either user can replace it."""
+    try:
+        os.chmod(path, DERIVATIVE_MODE)
+    except OSError:
+        pass  # not ours to chmod; the file is still readable
+    return path
 
 
 def is_video(filename):
@@ -54,45 +72,52 @@ def _squircle_mask(size, radius_ratio=0.22):
     return mask.resize((size, size), Image.LANCZOS)
 
 
-def make_diecut(source_path, out_path, size, border_ratio):
+def make_diecut(source_path, out_path, size, border_ratio, shape=None):
     """
     Write a transparent PNG sticker: photo, white vinyl border, ink keyline.
 
-    `size` is the full square canvas; the border eats `border_ratio` of it on
-    each side, so the photo itself lands in the middle.
+    `shape` is a slug from stickers/shapes/ (e.g. '06-splat'). Without one, or
+    if the file is missing, it falls back to the plain rounded square so a
+    sticker is always produced.
     """
     if not out_path:
         return None
 
-    border = max(2, int(size * border_ratio))
     keyline = max(1, int(size * 0.006))
-    inner = size - 2 * border
 
+    # The photo fills the whole canvas and the silhouette masks it, rather than
+    # being inset into a box — that is what lets an irregular outline (a splat,
+    # a starburst) crop the image to its own edge.
     photo = _square_crop(_open_upright(source_path)).resize(
-        (inner, inner), Image.LANCZOS)
+        (size, size), Image.LANCZOS).convert('RGBA')
+
+    points = shapes.load(shape) if shape else None
+    if points:
+        border = max(2, int(size * border_ratio))
+        outer = shapes.mask(points, size)
+        photo_mask = shapes.mask(points, size, inset=border)
+        key_inner = shapes.mask(points, size, inset=keyline)
+    else:
+        outer = _squircle_mask(size)
+        inset = size - 2 * int(size * border_ratio)
+        photo_mask = Image.new('L', (size, size), 0)
+        photo_mask.paste(_squircle_mask(inset, radius_ratio=0.20),
+                         (int(size * border_ratio), int(size * border_ratio)))
+        key_inner = Image.new('L', (size, size), 0)
+        key_inner.paste(_squircle_mask(size - 2 * keyline), (keyline, keyline))
 
     canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-
-    # The vinyl: a solid white squircle filling the canvas.
-    outer_mask = _squircle_mask(size)
-    canvas.paste(Image.new('RGBA', (size, size), VINYL), (0, 0), outer_mask)
-
-    # A thin ink keyline just inside that edge, so the sticker still reads as
-    # die-cut against a white or cream page. Built as the difference between
-    # the outer squircle and one inset by `keyline`.
-    inset = Image.new('L', (size, size), 0)
-    inset.paste(_squircle_mask(size - 2 * keyline), (keyline, keyline))
-    ring = ImageChops.subtract(outer_mask, inset)
+    # vinyl
+    canvas.paste(Image.new('RGBA', (size, size), VINYL), (0, 0), outer)
+    # ink keyline, as the difference between the outline and an inset of it
+    ring = ImageChops.subtract(outer, key_inner)
     canvas.paste(Image.new('RGBA', (size, size), INK), (0, 0), ring)
-
-    # The photo, masked to a slightly tighter squircle so the white reads as a
-    # border rather than a frame.
-    inner_mask = _squircle_mask(inner, radius_ratio=0.20)
-    canvas.paste(photo.convert('RGBA'), (border, border), inner_mask)
+    # the photograph
+    canvas.paste(photo, (0, 0), photo_mask)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     canvas.save(out_path, 'PNG', optimize=True)
-    return out_path
+    return _finalize(out_path)
 
 
 def make_thumb(source_path, out_path, width):
@@ -103,7 +128,7 @@ def make_thumb(source_path, out_path, width):
         (width, width), Image.LANCZOS)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, 'JPEG', quality=85, optimize=True, progressive=True)
-    return out_path
+    return _finalize(out_path)
 
 
 def make_lowres(source_path, out_path, width):
@@ -114,7 +139,7 @@ def make_lowres(source_path, out_path, width):
         (width, width), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.6))
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, 'JPEG', quality=60, optimize=True)
-    return out_path
+    return _finalize(out_path)
 
 
 def video_poster(source_path, out_path, at_seconds=1):
@@ -141,4 +166,4 @@ def video_poster(source_path, out_path, at_seconds=1):
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
             return None
-    return out_path if os.path.exists(out_path) else None
+    return _finalize(out_path) if os.path.exists(out_path) else None

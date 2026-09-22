@@ -14,17 +14,7 @@
 
 <main class="ss-sheet">
   {% for s in stickers %}
-  <article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg">
-    <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
-      <div class="ss-sticker__die">
-        <img class="ss-sticker__img" src="{{ s.thumb_url }}" loading="lazy"
-             alt="{{ s.species.common_name }}" width="640" height="640">
-        {% if s.is_video %}<span class="ss-sticker__play" aria-hidden="true">▶</span>{% endif %}
-      </div>
-      {% if s.wildlife_investigator %}
-        <p class="ss-sticker__by">{{ s.wildlife_investigator }}</p>{% endif %}
-    </a>
-  </article>
+    {% include 'stickers/_sticker_card.html' %}
   {% empty %}
     <p>No stickers for this one yet.</p>
   {% endfor %}

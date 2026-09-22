@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Wobbly oval sticker outline</title>
+  <desc id="desc">An irregular hand-cut oval suited to a retro product label.</desc>
+  <path id="sticker-shape" d="M456 260C455 326 416 382 349 413C284 443 197 435 132 401C70 369 45 315 55 253C65 191 104 140 164 111C226 81 310 78 374 111C433 142 457 197 456 260Z" fill="#fff" stroke="#111" stroke-width="12" stroke-linejoin="round"/>
+</svg>

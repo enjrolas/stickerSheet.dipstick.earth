@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Melted label sticker outline</title>
+  <desc id="desc">An organic rounded label with a few soft drooping lobes along the bottom.</desc>
+  <path id="sticker-shape" d="M105 83C77 88 59 110 59 140L61 318C61 349 78 368 107 375L160 386C173 389 177 405 180 427C183 448 194 462 211 461C232 460 235 436 236 412C237 394 244 386 256 387C269 388 273 402 276 424C279 447 291 459 308 457C326 455 328 431 327 411C326 392 334 382 350 379L404 370C434 365 452 342 451 311L446 137C445 105 425 84 393 82L105 83Z" fill="#fff" stroke="#111" stroke-width="12" stroke-linejoin="round"/>
+</svg>
