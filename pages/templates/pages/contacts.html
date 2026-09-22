@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact - the dipstick{% endblock %}
+{% block description %}Get in touch about the dipstick, an open-source camera on a bendy stick that uses your phone as the viewfinder.{% endblock %}
+{% block og_title %}Contact the dipstick{% endblock %}
+{% block og_description %}Get in touch about the dipstick, an open-source camera on a bendy stick that uses your phone as the viewfinder.{% endblock %}
+
+{% block content %}
+    <header class="ds-hero pb-0">
+        <div class="container">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-7 ds-hero__col">
+                    <h1 class="ds-display ds-hero__word ds-anim ds-anim--1" style="--word-em: 5.02">Contribute</h1>
+                    <p class="ds-hero__tag ds-anim ds-anim--2">The designs are open-source and free for anyone to use, improve and argue about.</p>
+                </div>
+                <div class="col-lg-5">
+                    <div class="ds-snap ds-hero__snap ds-anim ds-anim--2">
+                        <img src="{% static 'assets/img/axolotl.jpg' %}" alt="A dipstick camera with a blue bendy neck dipped into an aquarium beside a pale axolotl.">
+                        <img class="ds-hero__badge" src="{% static 'assets/img/dipstick-transparent.webp' %}" alt="">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="ds-section">
+        <div class="container">
+            <div class="row g-4 g-lg-5">
+                <div class="col-md-6">
+                    <h2 class="ds-h2">Push the bounds of the stick</h2>
+                    <p class="ds-lede">Want to build off of Dipstick? Start with the design files on our wiki, or join our community discord.</p>
+                    <div class="ds-hero__actions">
+                        <a class="ds-btn" href="https://discord.gg/EEsUhCmjTG">Join the Discord</a>
+                        <a class="ds-btn ds-btn--paper" href="https://wiki.dipstick.earth/index.php/Open-Source_Design_page">Community wiki</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h2 class="ds-h2">Don't dip! Let's chat</h2>
+                    <p class="ds-lede">Want to talk design, education, or stick business? Get in touch.</p>
+                    <div class="ds-hero__actions">
+                        <a class="ds-btn ds-btn--paper" href="mailto:hello@dipstick.earth">hello@dipstick.earth</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ds-section pt-0" id="contact">
+        <div class="container">
+            <div class="ds-cta">
+                <div>
+                    <h2 class="ds-display">Build one yourself</h2>
+                    <p>Design files, bill of materials and assembly guide are all free to download.</p>
+                </div>
+                <a class="ds-btn ds-btn--paper" role="button" href="index.html#diy">Get the files</a>
+            </div>
+        </div>
+    </section>
+
+    
+{% endblock %}

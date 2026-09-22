@@ -1,0 +1,47 @@
+{% extends 'stickers/base.html' %}
+{% load static %}
+
+{% block title %}Re-frame {{ sticker.species.common_name }} — dipstickers{% endblock %}
+
+{% block content %}
+<main class="ss-form-page">
+  <a class="ss-back" href="{% url 'stickers:review' %}">← review</a>
+  <h1 class="ss-hero__word ss-hero__word--small">re-frame</h1>
+  <p class="ss-hero__blurb">
+    {{ sticker.species.common_name }}{% if sticker.wildlife_investigator %},
+    sent in by {{ sticker.wildlife_investigator }}{% endif %}.
+    Saving re-cuts the sticker everywhere it appears.
+  </p>
+  {% if existing_poster %}
+  <p class="ss-field__help" style="max-width:620px">
+    The clip plays while you frame it. The still that gets cut into the
+    downloadable sticker is taken from it at the same crop.
+  </p>
+  {% endif %}
+
+  <form class="ss-form" method="post">
+    {% csrf_token %}
+    {{ form.shape }}{{ form.focal_x }}{{ form.focal_y }}{{ form.zoom }}
+    {% if form.errors %}
+      <div class="ss-message ss-message--error">{{ form.errors }}</div>
+    {% endif %}
+
+    {% include 'stickers/_framer.html' with allow_auto=False %}
+
+    <div class="ss-review__actions">
+      <button class="ss-btn ss-btn--blue ss-btn--big" type="submit">save the crop</button>
+      {% if sticker.status != 'published' %}
+        <button class="ss-btn ss-btn--yellow ss-btn--big" type="submit"
+                name="and_publish" value="1">save &amp; publish</button>
+      {% endif %}
+    </div>
+  </form>
+
+  <p class="ss-field__help" style="max-width:620px;margin-top:18px">
+    Current: shape <b>{{ sticker.resolved_shape|default:"auto" }}</b>,
+    focus {{ sticker.focal_x|floatformat:2 }}/{{ sticker.focal_y|floatformat:2 }},
+    zoom {{ sticker.zoom|floatformat:2 }} ·
+    <a href="{{ sticker.sticker_url }}" target="_blank" rel="noopener">the cut PNG</a>
+  </p>
+</main>
+{% endblock %}

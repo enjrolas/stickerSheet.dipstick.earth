@@ -53,7 +53,7 @@ class StickerAdmin(admin.ModelAdmin):
     """
 
     list_display = ('preview', 'species', 'wildlife_investigator', 'location',
-                    'status', 'binned', 'created_at')
+                    'status', 'binned', 'reframe_link', 'created_at')
     list_display_links = ('preview', 'species')
     list_filter = (BinFilter, 'status', 'media_kind', 'species__group',
                    'created_at')
@@ -74,7 +74,12 @@ class StickerAdmin(admin.ModelAdmin):
         }),
         ('The capture', {
             'fields': ('big_preview', 'media', 'media_kind', 'species',
-                       'caption', 'shape'),
+                       'caption'),
+        }),
+        ('Framing', {
+            'description': 'How the outline sits over the picture. Saving with '
+                           'any of these changed re-cuts the sticker.',
+            'fields': ('shape', 'focal_x', 'focal_y', 'zoom'),
         }),
         ('Credit and place', {
             'fields': ('wildlife_investigator', 'location', 'latitude',
@@ -103,6 +108,14 @@ class StickerAdmin(admin.ModelAdmin):
                 choices=[('', 'Auto (spread across the sheet)')]
                         + shapes.available())
         return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+    @admin.display(description='Re-frame')
+    def reframe_link(self, obj):
+        from django.urls import reverse
+        if not obj.slug:
+            return '—'
+        return format_html('<a href="{}">re-frame</a>',
+                           reverse('stickers:reframe', args=[obj.slug]))
 
     @admin.display(description='Sticker')
     def preview(self, obj):

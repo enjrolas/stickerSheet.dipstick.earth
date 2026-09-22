@@ -14,8 +14,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Overridden in local_settings.py on production.
 SECRET_KEY = 'django-insecure-dev-only-replace-me-in-local-settings'
-DEBUG = True
-ALLOWED_HOSTS = ['stickersheet.dipstick.earth', 'stickerSheet.dipstick.earth',
+DEBUG = False
+ALLOWED_HOSTS = ['dipstick.earth', 'www.dipstick.earth',
+                 'stickersheet.dipstick.earth', 'stickerSheet.dipstick.earth',
                  'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
@@ -28,9 +29,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'stickers',
+    'pages',
 ]
 
 MIDDLEWARE = [
+    # First: everything downstream, including the throttle, should see the
+    # real client address rather than a Cloudflare edge.
+    'stickers.middleware.CloudflareRealIPMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -93,6 +98,24 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Content-hashed static filenames (style.a1b2c3d4.css).
+#
+# The vhost sets Cache-Control: max-age=604800 on /static/, and Cloudflare
+# fronts this origin — so with plain filenames an edited stylesheet keeps
+# serving the old bytes for up to a week. That already happened: a rebuilt
+# framer.js came back `cf-cache-status: HIT, age: 25710` while the local file
+# had changed. Hashing means new content is a new URL, so the long cache is
+# correct instead of dangerous.
+#
+# Note this makes collectstatic strict: a {% static %} path or a CSS url()
+# that does not resolve becomes a hard error rather than a silent 404.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+    },
+}
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -137,9 +160,16 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_METHODS = ['GET', 'HEAD', 'OPTIONS']
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://stickersheet.dipstick.earth',
     'https://dipstick.earth',
+    'https://www.dipstick.earth',
+    'https://stickersheet.dipstick.earth',
 ]
+
+# Search and the group-filter chips are hidden for now — the sheet is small
+# enough that they are noise. The filtering itself still works from the URL
+# (?q= and ?group=) and through the API; this only controls the UI. Flip to
+# True to bring both back, on the sheet and on the sticker detail page.
+STICKER_SHEET_SHOW_FILTERS = False
 
 # --- Sticker pipeline knobs -------------------------------------------------
 STICKER_PNG_SIZE = 1024       # die-cut PNG, square, transparent

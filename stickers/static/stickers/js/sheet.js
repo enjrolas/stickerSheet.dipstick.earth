@@ -4,6 +4,9 @@
 
    The page is fully usable without any of this — every card is a plain link,
    photos already show their placeholder, and videos keep their poster. */
+/* The navbar shrink lives in assets/js/startup-modern.js, which every page
+   loads. It was duplicated here from before the sites merged. */
+
 (function () {
   'use strict';
 

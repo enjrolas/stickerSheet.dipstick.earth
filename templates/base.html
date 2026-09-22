@@ -1,0 +1,108 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}dipstick{% endblock %}</title>
+<meta name="description" content="{% block description %}Dipstick: a tentacle camera for filming underwater animals{% endblock %}">
+
+<meta property="og:title" content="{% block og_title %}dipstick{% endblock %}">
+<meta property="og:description" content="{% block og_description %}Dipstick: a tentacle camera for filming underwater animals{% endblock %}">
+<meta property="og:type" content="website">
+<meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'assets/img/og-dipstick-sticker.jpg' %}{% endblock %}">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="{% static 'stickers/favicon.ico' %}?v=1">
+
+{% comment %}
+Everything is served from this origin now — no more hot-linking across
+dipstick.earth and stickersheet.dipstick.earth, which were two copies of the
+same Bootstrap and the same font.
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'assets/bootstrap/css/bootstrap.min.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/chillax-variable.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="{% static 'assets/css/style-sticker.css' %}">
+{% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% include 'nav.html' %}
+
+{% if messages %}
+<div class="ss-messages">
+  {% for message in messages %}
+    <div class="ss-message ss-message--{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% block content %}{% endblock %}
+
+    <footer class="ds-footer">
+        <div class="container">
+            <div class="ds-footer__inner">
+                <div class="ds-footer__mark">
+                    <img src="{% static 'assets/img/dipstick-sticker-mark.png' %}" alt="">
+                    <span>dipstick.earth</span>
+                </div>
+                <ul class="ds-footer__links">
+                    <li><a href="https://wiki.dipstick.earth/index.php/Assembly_Guide">Assembly Guide</a></li>
+                    <li><a href="https://wiki.dipstick.earth/index.php/Open-Source_Design_page">DIY</a></li>
+                    <li><a href="https://discord.gg/EEsUhCmjTG">Community</a></li>
+                    <li><a href="{% url 'stickers:sheet' %}" target="_blank" rel="noopener">dipstickers</a></li>
+                    <li><a href="{% url 'pages:contacts' %}">Contact</a></li>
+                </ul>
+                <p class="ds-footer__fine">Copyright © 2026 Ex LLC</p>
+            </div>
+        </div>
+    </footer>
+
+    <div class="modal fade ds-modal" id="signup" tabindex="-1" aria-labelledby="signup-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <button type="button" class="ds-modal__close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
+                <h2 class="ds-modal__title" id="signup-title">dipstick news</h2>
+                <p class="ds-modal__lede">follow the dipstick adventures</p>
+                <form action="https://earth.us15.list-manage.com/subscribe/post?u=751c6e2f23414e02610e4705f&amp;id=e8f4cd60df&amp;f_id=00f5c2e1f0" method="post" target="_blank">
+                    <div class="ds-field">
+                        <label for="mce-EMAIL">Email address</label>
+                        <input type="email" name="EMAIL" id="mce-EMAIL" required="" autocomplete="email">
+                    </div>
+                    <div class="ds-field-row">
+                        <div class="ds-field">
+                            <label for="mce-FNAME">First name</label>
+                            <input type="text" name="FNAME" id="mce-FNAME" autocomplete="given-name">
+                        </div>
+                        <div class="ds-field">
+                            <label for="mce-LNAME">Last name</label>
+                            <input type="text" name="LNAME" id="mce-LNAME" autocomplete="family-name">
+                        </div>
+                    </div>
+                    <div aria-hidden="true" style="position: absolute; left: -5000px;">
+                        <!-- bot trap: real people never see this field -->
+                        <input type="text" name="b_751c6e2f23414e02610e4705f_e8f4cd60df" tabindex="-1" value="">
+                    </div>
+                    <button type="submit" name="subscribe" class="ds-btn ds-modal__submit">Sign me up</button>
+                    <p class="ds-modal__fine">Confirms in a new tab. Unsubscribe any time.</p>
+                    <a href="http://eepurl.com/H31Du2LZNZ" target="_blank" rel="noopener" title="Mailchimp - email marketing made easy and fun"><img class="ds-modal__badge" src="https://digitalasset.intuit.com/render/content/dam/intuit/mc-fe/en_us/images/intuit-mc-rewards-text-dark.svg" alt="Intuit Mailchimp" width="150" height="27" loading="lazy"></a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+{% comment %}
+Bootstrap once, for the whole site. These tags were swept in from
+index.html's tail when the static pages became templates, which left every
+page loading Bootstrap twice and running the home page's carousel script on
+pages that have no carousel. startup-modern.js is the navbar shrink, which IS
+site-wide chrome; the carousel script now belongs to the home page alone.
+{% endcomment %}
+<script src="{% static 'assets/bootstrap/js/bootstrap.min.js' %}" defer></script>
+<script src="{% static 'assets/js/startup-modern.js' %}" defer></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -141,23 +141,45 @@ cubics and fills the polygon with Pillow rather than depending on cairosvg (need
 ImageMagick's flaky SVG delegate. **If a new outline uses arcs (`A`) or quadratics (`Q`) the
 parser silently skips the command and the shape comes out wrong** — add the case.
 
-`shapes.mask(pts, size, inset=N)` does a **true uniform inset**, by re-stroking the filled
-polygon in black at `2N` wide. Two things here were learned the hard way and are covered by
-`test_inset_eats_inward_everywhere`:
+`shapes.mask(pts, size, inset=N)` does a **true uniform inset** — a morphological erosion by a
+disc, stamped as overlapping circles along a densified outline. **Two earlier approaches were
+wrong**; both are easy to "simplify" back into, so don't:
 
-- The first version scaled the polygon toward its centroid. On a starburst that *shortens* the
-  spikes instead of thinning them, so the photo reached right into the points and there was no
-  white border there. A uniform inset eats the narrow wedges away entirely — which is why the
-  inset bounding box is much smaller than the outline's on spiky shapes. That is correct.
-- The stroke runs over a **decimated** copy of the polyline. Curve flattening leaves points a
-  fraction of a pixel apart, and Pillow's wide-line renderer degenerates on a near-zero-length
-  segment — it throws black spurs out across the border. Dropping points closer than ~2px fixes
-  it. Don't remove `_decimate`.
+1. **Scaling the polygon toward its centroid.** On a starburst that *shortens* the spikes instead
+   of thinning them, so the photo reached into the points and there was no white border there. A
+   real uniform inset eats the narrow wedges away entirely — which is why the inset bounding box
+   is much smaller than the outline's on spiky shapes. That is correct, and
+   `test_inset_eats_inward_everywhere` pins it.
+2. **Stroking the outline** with `ImageDraw.line(width=2*inset, joint='curve')`. Geometrically
+   right, but Pillow's wide-line renderer leaves unfilled slivers at large widths, which showed
+   up as hairline whiskers radiating across the white border — subtle at 512px, obvious at 1024.
+
+Disc stamping has no such failure mode: every pixel within `inset` of the boundary is covered by
+construction. `_densify` keeps the step at `radius * 0.2`; the union of discs scallops between
+centres with amplitude `~radius * (1 - cos(asin(step/2r)))`, and 0.5 left a ripple visible on the
+cut edge. A 1024px mask takes ~0.15s.
 
 `Sticker.shape` picks the outline; blank means auto, derived from the pk so it is stable across
 rebuilds and spreads the ten shapes down the sheet. The admin dropdown is built from the files on
 disk (`formfield_for_dbfield`), so **dropping a new SVG into `stickers/shapes/` needs no
 migration** — just rerun `build_shape_masks` and `collectstatic`.
+
+## Framing — the crop is chosen in the browser, applied on the server
+
+`Sticker.focal_x`, `focal_y` and `zoom` say which square of the source becomes the sticker:
+`focal_*` is the point (0..1 of width/height) that lands in the middle, `zoom` 1.0 takes the
+largest square that fits. `imaging.focal_crop()` turns those three numbers into a rectangle,
+clamped so dragging to an edge stops rather than letting blank space in.
+
+**That rule is deliberately duplicated in `static/stickers/js/framer.js`**, which is what makes
+the live preview on `/submit/` honest — the stage shows exactly the square that will be cut.
+Change one, change the other. The crop rounds the *side* once and derives both edges from it;
+rounding each edge separately produced e.g. 402x401, which then got squashed into a square
+(`test_crop_is_always_square`).
+
+The submit page also offers the ten outlines as a visual picker (plus "surprise me", which leaves
+`shape` blank and lets the pk decide). The form validates `shape` against the files on disk and
+clamps the framing, so nothing the browser posts can escape those ranges.
 
 ## Cropping video and GIFs — why there are two mechanisms
 

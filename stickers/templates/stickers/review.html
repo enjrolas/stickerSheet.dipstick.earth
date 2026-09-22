@@ -1,0 +1,72 @@
+{% extends 'stickers/base.html' %}
+{% load stickerfx %}
+
+{% block title %}Review — dipstickers{% endblock %}
+
+{% block content %}
+<main class="ss-review">
+  <h1 class="ss-hero__word ss-hero__word--small">review</h1>
+  <p class="ss-hero__blurb">
+    Everything people have sent in. Nothing reaches the sheet until it is published here.
+  </p>
+
+  <div class="ss-chips">
+    {% for key, label in tabs %}{% endfor %}
+    <a class="ss-chip {% if show == 'pending' %}is-on{% endif %}" href="?show=pending">waiting <b>{{ counts.pending }}</b></a>
+    <a class="ss-chip {% if show == 'published' %}is-on{% endif %}" href="?show=published">on the sheet <b>{{ counts.published }}</b></a>
+    <a class="ss-chip {% if show == 'rejected' %}is-on{% endif %}" href="?show=rejected">rejected <b>{{ counts.rejected }}</b></a>
+    <a class="ss-chip {% if show == 'bin' %}is-on{% endif %}" href="?show=bin">bin <b>{{ counts.bin }}</b></a>
+  </div>
+
+  {% if stickers %}
+  <div class="ss-review__grid">
+    {% for s in stickers %}
+    <article class="ss-review__card">
+      <a class="ss-review__thumb" href="{% url 'stickers:reframe' s.slug %}"
+         style="--shape-mask: url('{{ s.shape_mask_url }}');
+                --shape-outline: url('{{ s.shape_svg_url }}')">
+        {% if s.is_video %}
+          <video class="ss-review__media" muted loop playsinline preload="metadata"
+                 {% if s.poster_url %}poster="{{ s.poster_url }}"{% endif %}
+                 src="{{ s.media.url }}"></video>
+        {% else %}
+          <img class="ss-review__media" src="{{ s.thumb_url|default:s.media.url }}"
+               alt="{{ s.species.common_name }}" loading="lazy">
+        {% endif %}
+        {% if s.is_video %}<span class="ss-review__badge">video</span>{% endif %}
+      </a>
+
+      <h2 class="ss-review__name">{{ s.species.common_name }}</h2>
+      <p class="ss-review__meta">
+        {% if s.wildlife_investigator %}{{ s.wildlife_investigator }}{% else %}<em>no credit</em>{% endif %}
+        {% if s.location %} · {{ s.location }}{% endif %}
+        <br><span class="ss-review__when">{{ s.created_at|date:"j M, H:i" }} · {{ s.resolved_shape|default:"auto" }}</span>
+      </p>
+      {% if s.caption %}<p class="ss-review__caption">{{ s.caption }}</p>{% endif %}
+
+      <div class="ss-review__actions">
+        <a class="ss-btn ss-btn--blue" href="{% url 'stickers:reframe' s.slug %}">re-frame</a>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="pk" value="{{ s.pk }}">
+          {% if s.is_deleted %}
+            <button class="ss-btn" name="action" value="restore" type="submit">restore</button>
+          {% else %}
+            {% if s.status != 'published' %}
+              <button class="ss-btn ss-btn--yellow" name="action" value="publish" type="submit">publish</button>
+            {% endif %}
+            {% if s.status != 'rejected' %}
+              <button class="ss-btn" name="action" value="reject" type="submit">reject</button>
+            {% endif %}
+            <button class="ss-btn" name="action" value="bin" type="submit">bin</button>
+          {% endif %}
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="ss-empty__big">Nothing here.</p>
+  {% endif %}
+</main>
+{% endblock %}

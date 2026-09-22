@@ -122,16 +122,41 @@ def load(slug):
     return pts if len(pts) >= 3 else None
 
 
+def _densify(pts, step):
+    """Insert points so no two neighbours are more than `step` apart."""
+    out = []
+    n = len(pts)
+    for i in range(n):
+        x0, y0 = pts[i]
+        x1, y1 = pts[(i + 1) % n]
+        out.append((x0, y0))
+        dx, dy = x1 - x0, y1 - y0
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist > step:
+            for k in range(1, int(dist / step) + 1):
+                t = k * step / dist
+                if t < 1.0:
+                    out.append((x0 + dx * t, y0 + dy * t))
+    return out
+
+
 def mask(pts, size, inset=0, supersample=4):
     """
     Fill `pts` into an L mask of `size`, eaten in by `inset` output pixels.
 
-    The inset is a TRUE uniform inset, not a scale toward the centroid: the
-    filled polygon is re-stroked in black at twice the inset width, which eats
-    exactly `inset` pixels inward all the way round. Centroid scaling was tried
-    first and is wrong on a spiky outline — it shortens the spikes instead of
-    thinning them, so a starburst lost its white border at the points while
-    keeping a fat one in the middle.
+    The inset is a TRUE uniform inset — a morphological erosion by a disk,
+    stamped as overlapping circles along a densified outline. Two earlier
+    approaches were wrong and both are worth remembering:
+
+    - Scaling the polygon toward its centroid shortens a starburst's spikes
+      instead of thinning them, so the points ended up with no border at all.
+    - Stroking the outline with `ImageDraw.line(width=2*inset, joint='curve')`
+      is geometrically right but Pillow's wide-line renderer leaves unfilled
+      slivers at big widths, which showed up as hairline whiskers radiating
+      across the white border.
+
+    Stamping circles has no such failure mode: every pixel within `inset` of
+    the boundary is covered, by construction.
     """
     big = int(size * supersample)
     k = big / VIEWBOX
@@ -140,24 +165,14 @@ def mask(pts, size, inset=0, supersample=4):
     img = Image.new('L', (big, big), 0)
     draw = ImageDraw.Draw(img)
     draw.polygon(scaled, fill=255)
+
     if inset > 0:
-        width = max(1, int(round(inset * supersample * 2)))
-        # Stroke a DECIMATED copy. Flattening the cubics leaves consecutive
-        # points a fraction of a pixel apart at this scale, and Pillow's
-        # wide-line renderer degenerates on a near-zero-length segment — the
-        # quad it builds for the segment flips and throws a black spur out
-        # across the border. Dropping points closer than ~2px removes them.
-        draw.line(_decimate(scaled, 2.0), fill=0, width=width, joint='curve')
+        radius = inset * supersample
+        # Step as a fraction of the radius. The union of discs scallops
+        # between centres with amplitude ~ radius * (1 - cos(asin(step/2r))),
+        # so 0.5 leaves a ripple you can see on the cut edge at 1024px and
+        # 0.2 puts it well under a pixel. The extra discs are cheap.
+        for x, y in _densify(scaled, radius * 0.2):
+            draw.ellipse((x - radius, y - radius, x + radius, y + radius),
+                         fill=0)
     return img.resize((size, size), Image.LANCZOS)
-
-
-def _decimate(pts, min_dist):
-    """Closed polyline with points nearer than `min_dist` dropped."""
-    out = [pts[0]]
-    for x, y in pts[1:]:
-        px, py = out[-1]
-        if (x - px) ** 2 + (y - py) ** 2 >= min_dist * min_dist:
-            out.append((x, y))
-    if len(out) < 3:
-        out = list(pts)
-    return out + [out[0]]

@@ -1,0 +1,35 @@
+/* Chillax — Indian Type Foundry, via Fontshare. Self-hosted.
+ *
+ * The variable woff2 carries the real wght axis (200–700). Earlier this file
+ * declared only a STATIC Bold as `font-weight: bold`, so any text asking for a
+ * normal weight silently fell back to a system font — which was every line of
+ * body copy on the site. The static WOFFs below exist only for browsers
+ * without woff2 support.
+ */
+
+/* Variable: the one modern browsers will actually use. */
+@font-face {
+	font-family: 'Chillax Variable';
+	src: url(../fonts/ChillaxVariable.woff2) format('woff2-variations'),
+	     url(../fonts/ChillaxVariable.woff2) format('woff2');
+	font-weight: 200 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* Static fallbacks (no woff2 support). */
+@font-face {
+	font-family: 'Chillax Variable';
+	src: url(../fonts/ChillaxVariable-Regular.woff) format('woff');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Chillax Variable';
+	src: url(../fonts/ChillaxVariable-Bold.woff) format('woff');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}

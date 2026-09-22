@@ -16,9 +16,9 @@ raster `<image>`, either linked or inlined as a data URI.
 
 import base64
 import mimetypes
-import os
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.utils.html import escape
 
 from . import shapes
@@ -29,10 +29,15 @@ VINYL = '#ffffff'
 KEYLINE_RATIO = 0.006
 
 
-def _data_uri(path):
-    """Inline a file as base64, so the SVG stands alone."""
-    mime, _ = mimetypes.guess_type(path)
-    with open(path, 'rb') as fh:
+def _data_uri(name):
+    """
+    Inline a stored file as base64, so the SVG stands alone.
+
+    Reads through the storage API — `name` is a storage key, not a path, so
+    this works whether the artwork is on local disk or in S3.
+    """
+    mime, _ = mimetypes.guess_type(name)
+    with default_storage.open(name, 'rb') as fh:
         blob = base64.b64encode(fh.read()).decode('ascii')
     return 'data:%s;base64,%s' % (mime or 'image/jpeg', blob)
 
@@ -54,11 +59,13 @@ def sticker_svg(sticker, href=None, embed=False, title=None):
 
     if embed:
         # A video has no still of its own; its poster is the frame we cut.
-        source = sticker._derivative_path('.poster.jpg') if sticker.is_video \
-            else (sticker.media.path if sticker.media else None)
-        if not source or not os.path.exists(source):
-            source = sticker._derivative_path('.thumb.jpg')
-        if not source or not os.path.exists(source):
+        if sticker.is_video:
+            source = sticker._derivative_name('.poster.jpg')
+        else:
+            source = sticker.media.name if sticker.media else None
+        if not source or not default_storage.exists(source):
+            source = sticker._derivative_name('.thumb.jpg')
+        if not source or not default_storage.exists(source):
             return None
         art = _data_uri(source)
     else:

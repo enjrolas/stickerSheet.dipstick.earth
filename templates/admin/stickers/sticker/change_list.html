@@ -1,0 +1,10 @@
+{% extends "admin/change_list.html" %}
+{% comment %}
+The review queue is a page of the site, not of the admin, so it is not in the
+navbar — visitors should never see staff chrome on the home page. This puts it
+where staff already are instead.
+{% endcomment %}
+{% block object-tools-items %}
+  <li><a href="{% url 'stickers:review' %}" class="viewlink">Review queue</a></li>
+  {{ block.super }}
+{% endblock %}

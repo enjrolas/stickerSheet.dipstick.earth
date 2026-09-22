@@ -43,24 +43,19 @@ body {
 a { color: var(--grape); }
 a:hover { color: var(--ink); }
 
-/* --- nav ------------------------------------------------------------------ */
-.ss-nav {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap;
-  padding: 14px 20px;
-  border-bottom: var(--rule);
-  background: var(--paper);
-  position: sticky; top: 0; z-index: 20;
+/* --- nav ------------------------------------------------------------------
+   The navbar's own styling lives in assets/css/style-sticker.css, which every
+   page loads. It used to be duplicated here from before the two sites merged,
+   which meant nav changes made in this file silently did nothing on the
+   marketing pages. Only the gallery-specific offset stays.
+
+   The nav is fixed-top, so these pages have to start below it. The marketing
+   pages do the same job with .ds-hero's top padding. */
+body { padding-top: 6.5rem; }
+
+@media (max-width: 767.98px) {
+  body { padding-top: 5.5rem; }
 }
-.ss-nav__home {
-  display: inline-flex; align-items: center; gap: 9px;
-  font-family: var(--display); font-weight: 700; font-size: 1.35rem;
-  color: var(--ink); text-decoration: none; letter-spacing: -.02em;
-}
-.ss-nav__home img { display: block; }
-.ss-nav__links { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.ss-nav__links a { color: var(--ink); text-decoration: none; font-weight: 500; }
-.ss-nav__links a:hover { text-decoration: underline; text-underline-offset: 4px; }
 
 /* --- buttons -------------------------------------------------------------- */
 .ss-btn {
@@ -89,6 +84,15 @@ a:hover { color: var(--ink); }
   margin: 0 0 18px;
 }
 .ss-hero__word--small { font-size: clamp(2.2rem, 7vw, 4rem); }
+.ss-hero__tagline {
+  max-width: 34ch;
+  margin: -6px 0 14px;
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(1.05rem, 2.6vw, 1.5rem);
+  line-height: 1.15; letter-spacing: -.01em;
+  text-wrap: balance;
+}
+
 .ss-hero__blurb {
   max-width: 46ch; font-size: 1.12rem; line-height: 1.55;
   color: var(--ink-soft); margin: 0 0 22px;
@@ -157,26 +161,79 @@ a:hover { color: var(--ink); }
   filter: drop-shadow(9px 9px 0 var(--ink));
 }
 
-.ss-sticker__media {
+/* The window the picture shows through: exactly the sticker square, masked
+   to the shape's inset silhouette.
+
+   The mask MUST live here and not on the media. mask-size:100% is 100% of the
+   element it is on, and live media is sized to its crop box (often ~177% of
+   the square) — so a mask on the media stretches across the scaled video
+   instead of the sticker, which is what threw every video out of alignment.
+   It only ever looked right while the media happened to be exactly the
+   square's size. Same structure as .ss-framer__clip. */
+.ss-sticker__clip {
   position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
+  overflow: hidden;
   -webkit-mask-image: var(--shape-mask);
           mask-image: var(--shape-mask);
   -webkit-mask-size: 100% 100%;
           mask-size: 100% 100%;
   -webkit-mask-repeat: no-repeat;
           mask-repeat: no-repeat;
+  background: #fff;   /* matches imaging.PAD when zoomed out */
+}
+
+.ss-sticker__media {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
   /* LQIP starts blurred; sheet.js swaps in the real thumb and clears this */
   filter: blur(8px); transform: scale(1.04);
   transition: filter .35s ease, transform .35s ease;
 }
 .ss-sticker__media.is-loaded { filter: none; transform: none; }
 
+/* Live media (video, GIF) is served whole, so the browser has to do the crop
+   a photo already had done for it in its thumbnail. `object-fit: cover` is
+   NOT that crop — it is a centred one at zoom 1, which ignores the framing
+   and made a zoomed-out clip look much closer in on the sheet than in its own
+   cut PNG. These percentages come from Sticker.live_crop, which uses the same
+   rule as imaging.focal_crop. */
+.ss-sticker__media--live {
+  /* `inset` FIRST. It is a shorthand for all four sides, so declaring it
+     after left/top — as this rule originally did — resets them to auto and
+     the media falls back to its static position. That is what knocked every
+     video and GIF out of alignment on the sheet. */
+  inset: auto;
+  left: var(--cl, 0);
+  top: var(--ct, 0);
+  width: var(--cw, 100%);
+  height: var(--ch, 100%);
+  object-fit: fill;   /* the box already carries the right aspect ratio */
+  /* The base rule blurs and scales up for the photo LQIP swap. Live media has
+     a poster instead, and a 1.04 scale would throw the crop off anyway. */
+  filter: none;
+  transform: none;
+}
+
+/* The "add yours" tile that leads the sheet.
+   add.png ships as a finished die-cut -- its own white vinyl border and
+   outline are baked into the PNG -- so it takes neither the --shape background
+   nor the inset mask that crop a submitted photo; either would cut a second
+   outline out of the first. It keeps .ss-sticker__die's square ratio, tilt,
+   hard shadow and hover, and because that drop-shadow follows the alpha rather
+   than the box, the shadow traces this artwork's real starburst edge exactly as
+   it does for every other sticker. */
+.ss-sticker--add .ss-sticker__die { background-image: none; }
+.ss-sticker--add .ss-sticker__art {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain; display: block;
+}
+
 /* No mask support (older Safari/Firefox builds): fall back to a round-ish
    clip rather than showing the media as a bare square over the outline. */
 @supports not ((mask-image: url('')) or (-webkit-mask-image: url(''))) {
-  .ss-sticker__media { border-radius: 22%; }
+  .ss-sticker__clip { border-radius: 22%; }
   .ss-sticker__die { background-image: none; }
 }
 
@@ -238,17 +295,6 @@ a:hover { color: var(--ink); }
 .ss-facts dt { font-weight: 700; font-size: .84rem; text-transform: uppercase;
                letter-spacing: .06em; color: var(--ink-soft); }
 .ss-facts dd { margin: 0; }
-
-.ss-diecut { text-align: center; margin: 0 0 22px; }
-.ss-diecut__img {
-  width: 100%; max-width: 250px; height: auto; display: block;
-  margin: 0 auto 14px;
-  filter: drop-shadow(6px 6px 0 rgba(20,18,16,.85));
-}
-.ss-map {
-  width: 100%; height: 220px; border: var(--rule); border-radius: 12px;
-  box-shadow: var(--pop-sm);
-}
 
 .ss-more { margin-top: 56px; }
 .ss-more__title {
@@ -313,4 +359,435 @@ a:hover { color: var(--ink); }
   * { transition: none !important; }
   .ss-sticker__die { transform: none; }
   .ss-sticker__media { filter: none; transform: none; }
+}
+
+/* --- the framing editor on /submit/ --------------------------------------
+   Pick an outline, then drag the media under it. The stage shows exactly the
+   square that imaging.focal_crop() will cut, so what you frame is what you
+   get. Without JS none of this activates and the form still posts. */
+.ss-framer {
+  margin: 0 0 22px;
+  padding: 18px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper-deep);
+}
+
+.ss-palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.ss-palette__item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 4px 6px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: var(--body);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.ss-palette__item:hover { transform: translate(-2px, -2px); box-shadow: var(--pop-sm); }
+.ss-palette__item.is-on {
+  background: var(--yellow);
+  box-shadow: var(--pop-sm);
+}
+.ss-palette__item:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.ss-palette__item img { display: block; width: 48px; height: 48px; }
+.ss-palette__auto {
+  display: grid; place-items: center;
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 2px dashed var(--ink);
+  font-family: var(--display); font-weight: 700; font-size: .85rem;
+}
+.ss-palette__name {
+  font-size: .68rem; line-height: 1.1; text-align: center;
+  color: var(--ink-soft);
+}
+.ss-palette__item.is-on .ss-palette__name { color: var(--ink); }
+
+.ss-framer__stage {
+  position: relative;
+  width: 100%; max-width: 340px;
+  aspect-ratio: 1;
+  margin: 0 auto 14px;
+  border: 2px dashed var(--ink);
+  border-radius: 12px;
+  cursor: grab;
+  touch-action: none;   /* we handle the drag ourselves */
+  display: grid; place-items: center;
+  /* the chosen outline: white vinyl body + ink keyline, exactly the art the
+     server cuts with */
+  background-image: var(--shape-outline);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.ss-framer__stage.is-dragging { cursor: grabbing; }
+.ss-framer__stage:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+/* Once a file is loaded the dashed placeholder border goes away and the
+   outline itself defines the edge. */
+.ss-framer.is-ready .ss-framer__stage { border-color: transparent; }
+
+/* The window the picture shows through: the sticker square, masked to the
+   shape's INSET silhouette so the vinyl border shows around the picture —
+   the same inset the server builds. */
+.ss-framer__clip {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  /* No border-radius: the mask defines the edge. A rounded square on top of
+     it would quietly clip whichever outline corners reach the square's edge. */
+  -webkit-mask-image: var(--shape-mask);
+          mask-image: var(--shape-mask);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  /* Matches imaging.PAD — visible when you zoom out past the picture's edge. */
+  background: #fff;
+}
+.ss-framer:not(.is-ready) .ss-framer__clip {
+  background: none;
+  -webkit-mask-image: none; mask-image: none;
+}
+
+.ss-framer__media {
+  position: absolute;
+  max-width: none;          /* sized explicitly from the crop maths */
+  user-select: none; -webkit-user-drag: none;
+  display: block;
+}
+
+.ss-framer__empty {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  margin: 0; padding: 0 16px;
+  text-align: center; color: var(--ink-soft); font-size: .92rem;
+}
+
+.ss-framer__zoom {
+  display: flex; align-items: center; gap: 12px;
+  max-width: 340px; margin: 0 auto;
+  font-family: var(--display); font-weight: 700; font-size: .95rem;
+}
+.ss-framer__zoom input { flex: 1; accent-color: var(--blue); }
+
+@media (max-width: 420px) {
+  .ss-palette { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); }
+  .ss-palette__item img, .ss-palette__auto { width: 40px; height: 40px; }
+}
+
+/* --- staff review queue --------------------------------------------------
+   Same die-cut treatment as the sheet, so what you approve is what people
+   will see. The thumbnail is masked exactly like a real sticker card. */
+.ss-review { max-width: 1180px; margin: 0 auto; padding: 30px 20px 70px; }
+.ss-review .ss-chips { margin: 0 0 26px; }
+
+.ss-review__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 26px;
+}
+
+.ss-review__card {
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper-deep);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.ss-review__thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  background-image: var(--shape-outline);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.ss-review__media {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  -webkit-mask-image: var(--shape-mask);
+          mask-image: var(--shape-mask);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+}
+.ss-review__badge {
+  position: absolute; right: 8px; bottom: 8px;
+  background: var(--yellow); border: 2px solid var(--ink);
+  border-radius: 999px; padding: 1px 9px;
+  font-size: .72rem; font-weight: 700;
+}
+
+.ss-review__name {
+  font-family: var(--display); font-weight: 700; font-size: 1.1rem;
+  margin: 6px 0 0; line-height: 1.15;
+}
+.ss-review__meta { margin: 0; font-size: .85rem; color: var(--ink-soft); }
+.ss-review__when { font-size: .78rem; opacity: .8; }
+.ss-review__caption { margin: 0; font-size: .9rem; }
+
+.ss-review__actions {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin-top: auto; padding-top: 8px;
+}
+.ss-review__actions form { display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-review__actions .ss-btn { font-size: .88rem; padding: 6px 13px; }
+.ss-review__actions .ss-btn--big { font-size: 1.05rem; padding: 12px 24px; }
+
+/* --- /stickersheet/ : stickers over the whole page ------------------------
+   The sticker layer is not a box you arrange things inside. It spans the
+   entire document, is completely transparent, and takes NO pointer events —
+   so the page underneath reads and clicks exactly as it would without it.
+   Only the placed stickers catch the pointer. That is what lets one sit over
+   the navbar or across a paragraph. */
+/* The page fits the viewport: nothing scrolls, so the instructions and the
+   footer are both visible without moving. The tray takes whatever height is
+   left and scrolls inside itself.
+
+   Guarded by a min-height query — on a short window there is genuinely not
+   enough room, and cutting the footer off is worse than letting the page
+   scroll. */
+.sk-page { position: relative; }
+
+@media (min-height: 640px) {
+  .sk-page {
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .sk-page > main.sk { flex: 1 1 auto; min-height: 0; }
+  .sk-page > .ds-footer { flex: 0 0 auto; }
+  .sk-page .sk__tray { height: 100%; min-height: 0; }
+}
+
+.sk__layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  min-height: 100%;
+  /* Above the navbar. Bootstrap's .fixed-top is z-index 1030, so anything
+     lower puts the stickers BEHIND it — which is why one dragged up there
+     disappeared. Sticking one over the nav is the point, so the layer has to
+     clear it, and the tray and controls have to clear the layer. */
+  z-index: 1040;
+  pointer-events: none;   /* the page stays usable straight through it */
+}
+.sk__layer.is-target::after {
+  content: '';
+  position: fixed; inset: 0;
+  outline: 3px dashed var(--blue); outline-offset: -8px;
+  pointer-events: none;
+}
+
+/* The tray sits IN the layout rather than floating over it, so the rule at
+   the bottom of the page is pushed below it instead of being overlapped. */
+.sk {
+  max-width: 1180px; margin: 0 auto; padding: 20px 20px 16px;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  gap: 14px 22px;
+  align-items: start;
+}
+.sk__head { grid-column: 2; grid-row: 1; }
+.sk__head { margin-bottom: 18px; max-width: 46ch; }
+.sk__lede {
+  margin: 0;
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(1.1rem, 2.6vw, 1.55rem);
+  line-height: 1.3; text-wrap: balance;
+}
+
+/* the tray -------------------------------------------------------------- */
+.sk__tray {
+  grid-column: 1; grid-row: 1 / span 2;
+  /* A full page of sheet, blank space and all — a sticker sheet with three
+     stickers on it still looks like a sheet. Taller than the viewport and it
+     scrolls inside itself rather than stretching the page. */
+  height: calc(100vh - 6.5rem - 64px);   /* fallback for short windows */
+  overflow-y: auto;
+  border: var(--rule); border-radius: 14px;
+  background: var(--paper-deep);
+  box-shadow: var(--pop-sm);
+  padding: 14px 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  gap: 10px;
+  align-content: start;
+}
+.sk__tray-title {
+  grid-column: 1 / -1; margin: 0 0 2px;
+  font-family: var(--display); font-weight: 700; font-size: .95rem;
+}
+.sk__peel {
+  position: relative;
+  border: 0; background: none; padding: 4px; cursor: grab;
+  border-radius: 10px;
+  transition: transform .12s ease;
+}
+.sk__peel:hover { transform: rotate(-4deg) scale(1.08); }
+.sk__peel:active { cursor: grabbing; }
+.sk__peel:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.sk__peel img { width: 100%; height: auto; display: block; }
+.sk__empty { grid-column: 1 / -1; margin: 0; color: var(--ink-soft); font-size: .9rem; }
+
+@media (max-width: 900px) {
+  .sk { grid-template-columns: 1fr; }
+  .sk__head { grid-column: 1; }
+  .sk__tray { grid-column: 1; grid-row: auto; height: 40vh; }
+}
+
+/* a placed sticker ------------------------------------------------------- */
+.sk__stuck {
+  position: absolute;
+  cursor: grab;
+  pointer-events: auto;   /* the one thing on the layer that IS clickable */
+  user-select: none; -webkit-user-drag: none;
+  filter: drop-shadow(4px 4px 0 rgba(20, 18, 16, .55));
+  will-change: transform;
+}
+.sk__stuck.is-held { cursor: grabbing; }
+.sk__stuck.is-picked {
+  filter: drop-shadow(4px 4px 0 rgba(20,18,16,.55))
+          drop-shadow(0 0 0 var(--blue)) drop-shadow(0 0 3px var(--blue));
+}
+
+.sk__bar {
+  grid-column: 1 / -1; grid-row: 3;
+  display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: center; justify-content: space-between;
+  padding: 14px 0 0;
+  border-top: var(--rule);
+}
+.sk__keys { display: flex; flex-wrap: wrap; gap: 14px; font-size: .84rem;
+            color: var(--ink-soft); }
+.sk__keys kbd {
+  font-family: var(--body); font-weight: 700; font-size: .78rem;
+  background: var(--paper-deep); border: 2px solid var(--ink);
+  border-radius: 6px; padding: 0 6px; color: var(--ink);
+}
+
+.sk__panel {
+  position: fixed; right: 18px; bottom: 18px; z-index: 1060;
+  width: 250px;
+  border: var(--rule); border-radius: 14px;
+  background: var(--paper); box-shadow: var(--pop);
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sk__panel[hidden] { display: none; }
+.sk__panel-name {
+  margin: 0; font-family: var(--display); font-weight: 700; font-size: 1rem;
+}
+.sk__panel label {
+  display: flex; align-items: center; gap: 10px;
+  font-size: .84rem; color: var(--ink-soft);
+}
+.sk__panel input[type=range] { flex: 1; accent-color: var(--blue); }
+.sk__panel-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk__panel-actions .ss-btn { font-size: .8rem; padding: 5px 11px; }
+
+@media (max-width: 900px) {
+  .sk__panel { right: 12px; left: 12px; width: auto; bottom: 12px; }
+}
+
+/* A placed sticker that moves. Three layers again — outline art behind, the
+   clip carrying the mask, the media inside sized to its crop box. The mask is
+   on the clip and never on the media: mask-size is 100% of whatever element
+   it sits on, and the media is deliberately larger than the square. */
+.sk__stuck--live {
+  aspect-ratio: 1;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.sk__stuck-clip {
+  position: absolute; inset: 0;
+  /* No overflow:hidden — the mask already limits what shows, and a rotated
+     box would clip the oversized media along the wrong edges. */
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  background: #fff;          /* matches imaging.PAD when zoomed out */
+  pointer-events: none;      /* the wrapper handles the dragging */
+}
+.sk__stuck-spin { position: absolute; inset: 0; }
+
+.sk__stuck-media {
+  position: absolute;
+  width: 100%; height: 100%;
+  object-fit: fill;          /* the box already carries the right aspect */
+  display: block;
+}
+.sk__peel { position: relative; }
+.sk__peel-badge {
+  position: absolute; right: 2px; bottom: 2px;
+  width: 17px; height: 17px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--yellow); border: 2px solid var(--ink);
+  font-size: .5rem; padding-left: 1px; pointer-events: none;
+}
+
+
+/* --- music mode -----------------------------------------------------------
+   The outline orbits the animal: the vinyl spins, the picture inside holds
+   still. That only works because a sticker is built as separate outline and
+   media layers — a flat die-cut PNG would turn the animal upside down with
+   it.
+
+   20rpm is one turn every three seconds. `--pulse` is the beat, set from the
+   microphone by musicmode.js and multiplied into the sticker's own transform
+   so a beat never disturbs how it was arranged. */
+.sk__stuck-backing,
+.sk__stuck-ring {
+  position: absolute; inset: 0;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+/* 5rpm — one turn every twelve seconds. The outline and the die-cut window
+   turn together; the wrapper inside the window turns the other way by the
+   same amount, so the picture stays upright while its edge orbits. All three
+   share one duration, and they start together, so they cannot drift. */
+.sk-music .sk__stuck-backing,
+.sk-music .sk__stuck-ring,
+.sk-music .sk__stuck-clip {
+  animation: sk-orbit 12s linear infinite;
+}
+.sk-music .sk__stuck-spin {
+  animation: sk-orbit-back 12s linear infinite;
+}
+@keyframes sk-orbit { to { transform: rotate(360deg); } }
+@keyframes sk-orbit-back { to { transform: rotate(-360deg); } }
+
+.sk__stuck { transition: transform .08s ease-out; }
+.sk-music .sk__stuck { transition: transform .06s ease-out; }
+
+.ss-btn.is-on {
+  background: var(--yellow);
+  box-shadow: inset 2px 2px 0 rgba(20,18,16,.25), var(--pop-sm);
+}
+.sk__music-note {
+  font-size: .82rem; color: var(--ink-soft); margin: 0;
+  flex-basis: 100%;
+}
+
+/* Spinning anything is exactly what someone with vestibular trouble asked
+   not to see. */
+@media (prefers-reduced-motion: reduce) {
+  .sk-music .sk__stuck-backing,
+  .sk-music .sk__stuck-ring,
+  .sk-music .sk__stuck-clip,
+  .sk-music .sk__stuck-spin { animation: none; }
+  .sk__stuck { transition: none; }
 }

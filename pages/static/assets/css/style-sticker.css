@@ -1,0 +1,533 @@
+/* ==========================================================================
+   dipstick.earth — Option A: "Sticker Sheet"
+   The page as a laptop lid / Pelican case covered in die-cut vinyl.
+   Layered on top of Bootstrap; overrides only what it must.
+   ========================================================================== */
+
+:root {
+  --paper:      #fbf6ec;
+  --paper-deep: #f2e9d7;
+  --ink:        #141210;
+  --ink-soft:   #4a443c;
+  --yellow:     #ffd11a;
+  --blue:       #3f9bd8;
+  --grape:      #5b4b94;
+  --teal:       #1b8c93;
+  --red:        #e8412f;
+
+  --rule: 3px solid var(--ink);
+  --pop: 6px 6px 0 var(--ink);
+  --pop-sm: 4px 4px 0 var(--ink);
+
+  --display: 'Chillax Variable', 'Hanken Grotesk', system-ui, sans-serif;
+  --body: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+}
+
+/* Bootstrap token overrides ---------------------------------------------- */
+:root,
+[data-bs-theme="light"] {
+  --bs-body-bg: var(--paper);
+  --bs-body-color: var(--ink);
+  --bs-body-font-family: var(--body);
+  --bs-body-font-weight: 400;
+  --bs-primary: var(--blue);
+  --bs-link-color: var(--grape);
+  --bs-link-hover-color: var(--ink);
+  --bs-border-color: var(--ink);
+}
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  background-color: var(--paper);
+  /* faint paper tooth so the stickers read as applied to a surface */
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(63,155,216,.07), transparent 42%),
+    radial-gradient(circle at 84% 68%, rgba(255,209,26,.10), transparent 46%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Type scale -------------------------------------------------------------- */
+.ds-display {
+  font-family: var(--display);
+  font-weight: 700;
+  line-height: .86;
+  letter-spacing: -.025em;
+  text-transform: lowercase;
+}
+
+h2, h3, h4 { font-family: var(--display); font-weight: 700; letter-spacing: -.02em; }
+
+p { max-width: 62ch; }
+
+a { text-underline-offset: .18em; text-decoration-thickness: 2px; }
+
+:where(a, button, [tabindex]):focus-visible {
+  outline: 3px solid var(--grape);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Navbar ------------------------------------------------------------------ */
+#mainNav {
+  background: rgba(251, 246, 236, .92);
+  backdrop-filter: blur(8px);
+  border-bottom: var(--rule);
+  transition: padding .2s ease;
+}
+#mainNav.navbar-shrink { padding-top: .35rem !important; padding-bottom: .35rem !important; }
+
+#mainNav .navbar-brand img {
+  width: 62px; height: 62px;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+#mainNav.navbar-shrink .navbar-brand img { width: 48px; height: 48px; }
+#mainNav .navbar-brand:hover img { transform: rotate(-8deg) scale(1.06); }
+
+#mainNav .nav-link {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  color: var(--ink);
+  padding: .3rem .75rem;
+  margin: 0 .1rem;
+  border-radius: 999px;
+  position: relative;
+}
+#mainNav .nav-link:hover { color: var(--grape); }
+
+/* active = a yellow highlighter swipe behind the word, not a color swap */
+#mainNav .nav-link.active {
+  background: var(--yellow);
+  box-shadow: 0 0 0 2px var(--ink);
+  color: var(--ink);
+}
+
+#mainNav .navbar-toggler {
+  border: var(--rule);
+  border-radius: 10px;
+  padding: .35rem .6rem;
+}
+
+
+/* Centring the nav items ---------------------------------------------------
+   Vertical: the brand mark is 62px and the links are ~28px, so without this
+   they sit against the top of the row rather than on its centre line.
+   Horizontal: Bootstrap's .mx-auto centres the list inside the collapse,
+   which starts AFTER the brand and ends BEFORE the CTA — so the list lands
+   off-centre by half the difference between those two. Taking it out of flow
+   and pinning it to 50% of the bar centres it against the bar itself.
+   Only from lg up: below that there is not enough width for the items to
+   clear the brand and the button, and they would overlap. */
+#mainNav .navbar-collapse { align-items: center; }
+#mainNav .navbar-nav { align-items: center; }
+#mainNav .nav-item { display: flex; align-items: center; }
+#mainNav .nav-link { display: flex; align-items: center; line-height: 1.1; }
+
+/* Horizontal centring is left to Bootstrap's .mx-auto, which centres the
+   list in the space BETWEEN the brand and the CTA. An earlier version pinned
+   it to 50% of the bar with absolute positioning; that is centred against the
+   bar, but it takes the list out of flow, so nothing stops it running under
+   "follow for updates" — and removing Intro left an obvious gap on the left.
+   In flow the two can never collide, whatever the item count. */
+
+/* Buttons ----------------------------------------------------------------- */
+.ds-btn {
+  display: inline-block;
+  /* some .ds-btn are now <button> (modal triggers), which need these reset */
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: .85rem 1.5rem;
+  border: var(--rule);
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: var(--pop-sm);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.ds-btn:hover,
+.ds-btn:focus-visible {
+  color: var(--ink);
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.ds-btn--paper { background: var(--paper); }
+
+/* the navbar CTA reuses the button shape */
+#mainNav .btn-primary {
+  font-family: var(--display);
+  font-weight: 700;
+  background: var(--blue);
+  color: var(--paper);
+  border: var(--rule);
+  border-radius: 999px;
+  padding: .55rem 1.15rem;
+  box-shadow: var(--pop-sm);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+#mainNav .btn-primary:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Hero -------------------------------------------------------------------- */
+.ds-hero { padding-top: 8.5rem; padding-bottom: 3rem; }
+
+.ds-hero__col { container-type: inline-size; }
+
+.ds-hero__word {
+  /* The hero word is only safe while font-size <= column_width / its own em
+     width. Bootstrap's container jumps in steps, so viewport units can't track
+     it (13vw once overflowed col-lg-5 by 23px at 1440 and the photo panel
+     painted over the "ck"). Size against the column instead.
+
+     --word-em is that measurement, set per page next to the word itself:
+       "dipstick"   3.882em  (index.html, the default)
+       "contribute" 5.020em  (contacts.html)
+     93 rather than 100 keeps the ~7% safety margin index.html already had.
+     Re-measure if the word changes - see CLAUDE.md for the script.
+
+     First declaration is the fallback for engines without container queries;
+     the second wins where they're supported. */
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  font-size: min(calc(93cqw / var(--word-em, 3.882)), var(--word-max, 7.8rem));
+  margin: 0;
+  position: relative;  /* belt and braces: stay above the photo panel */
+  z-index: 1;
+}
+.ds-hero__the {
+  display: block;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(1.1rem, 3vw, 1.9rem);
+  letter-spacing: .02em;
+  color: var(--grape);
+  margin-bottom: .1em;
+}
+.ds-hero__tag {
+  font-size: clamp(1.05rem, 2.3vw, 1.35rem);
+  color: var(--ink-soft);
+  margin: 1.1rem 0 0;
+  max-width: 30ch;
+}
+.ds-hero__actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.9rem; }
+
+/* photo mounted like a die-cut sticker: white border, hard shadow, tilted */
+.ds-snap {
+  position: relative;
+  display: block;
+  border: var(--rule);
+  border-radius: 18px;
+  background: #fff;
+  padding: 10px;
+  box-shadow: var(--pop);
+  overflow: visible;
+}
+.ds-snap > img:not(.ds-hero__badge) { display: block; width: 100%; border-radius: 10px; }
+.ds-hero__snap { transform: rotate(-2.5deg); }
+
+/* the starburst logo peeling off the corner of the photo */
+.ds-snap .ds-hero__badge {
+  position: absolute;
+  right: -34px;
+  bottom: -30px;
+  width: clamp(92px, 16vw, 148px);
+  transform: rotate(13deg);
+  filter: drop-shadow(3px 4px 0 rgba(20,18,16,.32));
+  pointer-events: none;
+}
+
+/* Section headings -------------------------------------------------------- */
+.ds-section { padding: 4.5rem 0; }
+
+.ds-h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(2rem, 5.2vw, 3.4rem);
+  line-height: .95;
+  letter-spacing: -.025em;
+  margin: 0 0 .6rem;
+}
+.ds-lede { font-size: 1.12rem; color: var(--ink-soft); }
+
+/* Carousel ---------------------------------------------------------------- */
+.ds-carousel {
+  border: var(--rule);
+  border-radius: 20px;
+  background: #fff;
+  padding: 10px;
+  box-shadow: var(--pop);
+  overflow: hidden;
+}
+.ds-carousel .carousel-inner { border-radius: 12px; overflow: hidden; }
+.ds-carousel .carousel-item img,
+.ds-carousel .carousel-item video {
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+/* Portrait footage (shot through the stick, on a phone) would be cropped to a
+   ribbon by `cover`. Letterbox it against the ink ground instead. */
+.ds-carousel .carousel-item img.ds-portrait,
+.ds-carousel .carousel-item video.ds-portrait {
+  object-fit: contain;
+  background: var(--ink);
+}
+.ds-carousel .carousel-control-prev,
+.ds-carousel .carousel-control-next {
+  width: auto;
+  padding: 0 1rem;
+  opacity: 1;
+}
+.ds-carousel .carousel-control-prev-icon,
+.ds-carousel .carousel-control-next-icon {
+  width: 46px; height: 46px;
+  background-color: var(--paper);
+  background-size: 45%;
+  border: var(--rule);
+  border-radius: 999px;
+  box-shadow: var(--pop-sm);
+  filter: none;
+}
+.ds-carousel .carousel-indicators { margin-bottom: .6rem; }
+.ds-carousel .carousel-indicators [data-bs-target] {
+  width: 13px; height: 13px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  opacity: 1;
+  margin: 0 5px;
+}
+.ds-carousel .carousel-indicators .active { background: var(--yellow); }
+
+.ds-caption {
+  font-size: .95rem;
+  color: var(--ink-soft);
+  margin: .9rem auto 0;
+  text-align: center;
+  max-width: 54ch;
+}
+
+/* Feature stickers — no cards. The art is already die-cut; let it sit on the
+   surface and carry its own edge. ---------------------------------------- */
+.ds-stickers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem 2rem;
+  margin-top: 1rem;
+}
+.ds-sticker { text-align: center; }
+.ds-sticker img {
+  width: min(100%, 230px);
+  height: auto;
+  filter: drop-shadow(4px 5px 0 rgba(20,18,16,.26));
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+.ds-sticker:nth-child(1) img { transform: rotate(-4deg); }
+.ds-sticker:nth-child(2) img { transform: rotate(2deg); }
+.ds-sticker:nth-child(3) img { transform: rotate(5deg); }
+.ds-sticker:hover img { transform: rotate(0deg) scale(1.05); }
+
+.ds-sticker p {
+  margin: 1rem auto 0;
+  max-width: 30ch;
+  color: var(--ink-soft);
+}
+
+/* DIY strip --------------------------------------------------------------- */
+.ds-diy { background: var(--paper-deep); border-block: var(--rule); }
+
+.ds-parts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-top: 2.25rem;
+}
+.ds-part {
+  display: flex;
+  flex-direction: column;
+  border: var(--rule);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--pop-sm);
+  text-decoration: none;
+  color: var(--ink);
+  overflow: hidden;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.ds-part:hover,
+.ds-part:focus-visible {
+  color: var(--ink);
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.ds-part__art {
+  background: #fff;
+  border-bottom: var(--rule);
+  padding: .85rem 1rem;
+  display: grid;
+  place-items: center;
+  min-height: 92px;
+}
+.ds-part__art img { width: 100%; height: auto; }
+.ds-part__label {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: .8rem 1rem;
+}
+
+/* Contact band ------------------------------------------------------------ */
+.ds-cta {
+  border: var(--rule);
+  border-radius: 24px;
+  background: var(--yellow);
+  box-shadow: var(--pop);
+  padding: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.ds-cta h2 { font-size: clamp(1.8rem, 4.4vw, 2.6rem); margin: 0 0 .35rem; line-height: 1; }
+.ds-cta p { margin: 0; color: var(--ink); }
+.ds-cta a:not(.ds-btn) { color: var(--grape); font-weight: 600; }
+
+/* Footer ------------------------------------------------------------------ */
+.ds-footer { border-top: var(--rule); margin-top: 1rem; }
+.ds-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem 0;
+}
+.ds-footer__mark { display: flex; align-items: center; gap: .7rem; font-family: var(--display); font-weight: 700; }
+.ds-footer__mark img { width: 40px; height: 40px; }
+.ds-footer__links { display: flex; flex-wrap: wrap; gap: 1.25rem; list-style: none; margin: 0; padding: 0; }
+.ds-footer__links a { color: var(--ink-soft); text-decoration: none; }
+.ds-footer__links a:hover { color: var(--ink); text-decoration: underline; }
+.ds-footer__fine { font-size: .9rem; color: var(--ink-soft); margin: 0; }
+
+/* One orchestrated arrival: the hero pieces settle like applied stickers. -- */
+@media (prefers-reduced-motion: no-preference) {
+  .ds-anim { animation: ds-settle .55s cubic-bezier(.22,1.2,.36,1) backwards; }
+  .ds-anim--1 { animation-delay: .04s; }
+  .ds-anim--2 { animation-delay: .14s; }
+  .ds-anim--3 { animation-delay: .24s; }
+  @keyframes ds-settle {
+    from { opacity: 0; transform: translateY(14px) scale(.97) rotate(-1.5deg); }
+    to   { opacity: 1; }
+  }
+}
+
+/* Responsive -------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  .ds-parts { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 767.98px) {
+  .ds-hero { padding-top: 7rem; }
+  .ds-stickers { grid-template-columns: 1fr; gap: 2.75rem; }
+  .ds-hero__snap { transform: none; margin-top: 2.5rem; }
+  .ds-snap .ds-hero__badge { right: -14px; bottom: -18px; }
+  .ds-section { padding: 3.25rem 0; }
+  .ds-cta { padding: 1.75rem; }
+  #mainNav .navbar-collapse { padding-top: .75rem; }
+  #mainNav .btn-primary { display: inline-block; margin-top: .6rem; }
+}
+
+/* Mailing-list modal ------------------------------------------------------
+   Mailchimp's own embed CSS (classic-061523.css) is a fixed 600px Helvetica
+   block, so it is not loaded; the form is restyled with the tokens above.
+   Mailchimp's mc-validate.js is not loaded either — it needs jQuery, which
+   this site does not have. Native `required` + type="email" cover it. */
+.ds-modal .modal-dialog { max-width: 30rem; }
+
+.ds-modal .modal-content {
+  background: var(--paper);
+  border: var(--rule);
+  border-radius: 20px;
+  box-shadow: var(--pop);
+  padding: 2rem;
+}
+
+.ds-modal__close {
+  position: absolute;
+  top: .75rem;
+  right: .75rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--rule);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.ds-modal__close:hover { background: var(--yellow); }
+
+.ds-modal__title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 5vw, 2.1rem);
+  line-height: 1;
+  letter-spacing: -.02em;
+  margin: 0 2rem .5rem 0;
+}
+.ds-modal__lede { color: var(--ink-soft); margin: 0 0 1.4rem; font-size: 1rem; }
+
+.ds-field { margin-bottom: .9rem; }
+.ds-field label {
+  display: block;
+  font-weight: 600;
+  font-size: .92rem;
+  margin-bottom: .3rem;
+}
+.ds-field input {
+  width: 100%;
+  font-family: var(--body);
+  font-size: 1rem;
+  padding: .7rem .85rem;
+  background: #fff;
+  color: var(--ink);
+  border: var(--rule);
+  border-radius: 10px;
+}
+.ds-field input:focus-visible {
+  outline: 3px solid var(--grape);
+  outline-offset: 2px;
+}
+.ds-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 .75rem; }
+
+.ds-modal__submit { width: 100%; margin-top: .6rem; cursor: pointer; }
+
+.ds-modal__fine {
+  font-size: .85rem;
+  color: var(--ink-soft);
+  margin: .9rem 0 0;
+  text-align: center;
+}
+.ds-modal__badge { display: block; margin: .9rem auto 0; opacity: .75; }
+
+@media (max-width: 575.98px) {
+  .ds-modal .modal-content { padding: 1.5rem; }
+  .ds-field-row { grid-template-columns: 1fr; }
+}

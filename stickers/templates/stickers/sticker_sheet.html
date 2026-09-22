@@ -1,0 +1,95 @@
+{% extends 'stickers/base.html' %}
+{% load static %}
+
+{% block title %}Sticker Sheet — dipstickers{% endblock %}
+{% block description %}Peel an animal off the sticker sheet and stick it down. Make em big or small, spin em around.{% endblock %}
+
+{% block body_class %}sk-page{% endblock %}
+
+{% block content %}
+{% comment %}
+The sticker layer spans the whole document, is completely transparent, and
+takes no pointer events — so everything underneath stays readable and
+clickable. Only the stickers themselves catch the pointer. That is what lets
+you stick one over the navbar, the text, or the margin, instead of penning
+them into a box.
+{% endcomment %}
+<div class="sk__layer" data-canvas aria-label="Sticker layer. Drag to move, shift-drag to rotate, shift-scroll to resize."></div>
+
+<main class="sk">
+  <header class="sk__head">
+    <p class="sk__lede">
+      Peel an animal off the sticker sheet and stick it down.<br>
+      Make em big or small, spin em around.
+    </p>
+  </header>
+
+  <aside class="sk__tray" data-tray aria-label="Sticker sheet">
+    <p class="sk__tray-title">dipsticker sheet</p>
+    {% for s in stickers %}
+      {% comment %}
+      Every sticker is rebuilt from its parts on the canvas — outline art
+      behind, media clipped to the inset mask, placed by the stored framing.
+      The flat die-cut PNG would do for a still, but music mode spins the
+      outline while the picture holds still, so they cannot be one image.
+      {% endcomment %}
+      <button class="sk__peel" type="button" draggable="true"
+              data-src="{{ s.sticker_url }}"
+              data-name="{{ s.species.common_name }}"
+              data-kind="{% if s.is_video %}video{% elif s.is_gif %}gif{% else %}still{% endif %}"
+              data-outline="{{ s.shape_outline_url }}"
+              data-ring="{{ s.shape_ring_url }}"
+              data-mask="{{ s.shape_mask_url }}"
+              {% if s.is_animated %}
+              data-media="{{ s.media.url }}"
+              data-poster="{{ s.poster_url }}"
+              {% with c=s.live_crop %}{% if c %}data-crop="{{ c.0|floatformat:3 }},{{ c.1|floatformat:3 }},{{ c.2|floatformat:3 }},{{ c.3|floatformat:3 }}"{% endif %}{% endwith %}
+              {% else %}
+              {# the framed square; the flat PNG bakes the outline in #}
+              data-media="{{ s.thumb_url }}"
+              {% endif %}
+              title="{{ s.species.common_name }}"
+              aria-label="Peel {{ s.species.common_name }}">
+        <img src="{{ s.sticker_url }}" alt="" draggable="false">
+        {% if s.is_animated %}<span class="sk__peel-badge" aria-hidden="true">&#9654;</span>{% endif %}
+      </button>
+    {% empty %}
+      <p class="sk__empty">No stickers on the sheet yet.</p>
+    {% endfor %}
+  </aside>
+
+  <div class="sk__bar">
+    <div class="sk__keys">
+      <span><kbd>drag</kbd> move</span>
+      <span><kbd>shift</kbd>+drag rotate</span>
+      <span><kbd>shift</kbd>+scroll resize</span>
+      <span><kbd>del</kbd> remove</span>
+    </div>
+    <button class="ss-btn" type="button" data-music aria-pressed="false">
+      animal disco
+    </button>
+    <button class="ss-btn" type="button" data-clear>clear the page</button>
+    <p class="sk__music-note" data-music-note role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="sk__panel" data-panel hidden>
+    <p class="sk__panel-name" data-panel-name></p>
+    <label>rotate
+      <input type="range" min="-180" max="180" step="1" value="0" data-rot>
+    </label>
+    <label>size
+      <input type="range" min="30" max="400" step="1" value="140" data-scale>
+    </label>
+    <div class="sk__panel-actions">
+      <button class="ss-btn" type="button" data-front>bring to front</button>
+      <button class="ss-btn" type="button" data-flip>flip</button>
+      <button class="ss-btn ss-btn--yellow" type="button" data-remove>remove</button>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'stickers/js/stickersheet.js' %}" defer></script>
+<script src="{% static 'stickers/js/musicmode.js' %}" defer></script>
+{% endblock %}

@@ -1,14 +1,14 @@
 {% extends 'stickers/base.html' %}
-{% load stickerfx %}
+{% load static stickerfx %}
 
 {% block content %}
 <header class="ss-hero">
-  <h1 class="ss-hero__word">sticker<br>sheet</h1>
-  <p class="ss-hero__blurb">
-    Every animal anyone has found down a dipstick. {{ total }} sticker{{ total|pluralize }},
-    {{ species_total }} species, peeled off and stuck down as they come in.
+  <h1 class="ss-hero__word">dipstickers</h1>
+  <p class="ss-hero__tagline">
+    90s stickers of animals filmed with dipsticks
   </p>
 
+{% if show_filters %}
   <form class="ss-filter" method="get" action="{% url 'stickers:sheet' %}" role="search">
     <input class="ss-filter__input" type="search" name="q" value="{{ query }}"
            placeholder="search a species, a place, a person" aria-label="Search stickers">
@@ -23,10 +23,29 @@
          href="?group={{ g.group }}">{{ group_labels|dictkey:g.group }} <b>{{ g.n }}</b></a>
     {% endfor %}
   </div>
+  {% endif %}
 </header>
 
 {% if stickers %}
 <main class="ss-sheet" id="sheet">
+  {% comment %}
+  "Add yours" leads the sheet. add.png is already a finished die-cut -- it
+  carries its own white vinyl border and outline -- so this deliberately skips
+  the --shape background and --shape-mask that _sticker_card.html uses to crop a
+  submitted photo. Masking it would cut a second outline out of the first. It
+  still borrows .ss-sticker__die for the grid sizing, tilt, hard shadow and
+  hover, so it reads as one of the stickers rather than a button on top.
+  Art only -- no name, no caption.
+  {% endcomment %}
+  <article class="ss-sticker ss-sticker--add" style="--tilt: -3deg">
+    <a class="ss-sticker__link" href="{% url 'stickers:submit' %}"
+       aria-label="Add your own sticker">
+      <div class="ss-sticker__die">
+        <img class="ss-sticker__art" src="{% static 'stickers/img/add.png' %}"
+             alt="" width="640" height="640" fetchpriority="high">
+      </div>
+    </a>
+  </article>
   {% for s in stickers %}
     {% include 'stickers/_sticker_card.html' %}
   {% endfor %}

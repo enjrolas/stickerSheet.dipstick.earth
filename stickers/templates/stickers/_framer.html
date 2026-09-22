@@ -1,0 +1,59 @@
+{% load static %}{% comment %}
+The framing editor, shared by /submit/ (a file being chosen) and
+/review/<slug>/ (a sticker that already exists).
+
+Three layers, in the same order the finished sticker is built:
+  stage  — the outline art: white vinyl + ink keyline
+  clip   — exactly the sticker square, masked to that shape's inset silhouette
+  media  — moved and scaled by the crop maths, itself unmasked
+
+The mask must sit on `clip`. It used to sit on the media element, which is
+several times larger once zoomed, so mask-size:100% stretched the silhouette
+across the whole scaled picture instead of the sticker.
+
+`existing_url` switches it from "wait for a file input" to "load this".
+
+The script is loaded HERE rather than left to each page's own block. The
+re-frame page included this markup without it, so the editor rendered and
+then did nothing at all — no media, no mask. Shipping the behaviour with the
+markup makes that impossible.
+{% endcomment %}
+<script src="{% static 'stickers/js/framer.js' %}" defer></script>
+<div class="ss-framer" data-framer
+     {% if existing_url %}data-existing-url="{{ existing_url }}"
+     data-existing-kind="{{ existing_kind }}"
+     {% if existing_poster %}data-existing-poster="{{ existing_poster }}"{% endif %}{% endif %}>
+  <div class="ss-field__label">Shape</div>
+  <div class="ss-palette" role="group" aria-label="Sticker shape">
+    {% if allow_auto %}
+    <button type="button" class="ss-palette__item" data-shape=""
+            aria-pressed="false" title="Let us pick">
+      <span class="ss-palette__auto">any</span>
+      <span class="ss-palette__name">surprise me</span>
+    </button>
+    {% endif %}
+    {% for shape in palette %}
+    <button type="button" class="ss-palette__item" data-shape="{{ shape.slug }}"
+            data-mask="{{ shape.mask }}" data-outline="{{ shape.outline }}"
+            aria-pressed="false" title="{{ shape.label }}">
+      <img src="{{ shape.swatch }}" alt="" width="64" height="64" loading="lazy">
+      <span class="ss-palette__name">{{ shape.label }}</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <div class="ss-field__label">Framing</div>
+  <div class="ss-framer__stage" data-stage tabindex="0"
+       role="application" aria-label="Drag to position the picture inside the sticker">
+    <div class="ss-framer__clip" data-clip>
+      <p class="ss-framer__empty" data-empty>Choose a file above to frame it.</p>
+    </div>
+  </div>
+
+  <label class="ss-framer__zoom">
+    <span>Zoom</span>
+    <input type="range" min="0.2" max="4" step="0.01" value="1" data-zoom
+           aria-label="Zoom">
+  </label>
+  <p class="ss-field__help" data-hint>Choose a file to start framing.</p>
+</div>

@@ -160,9 +160,21 @@ class SubmitViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         sticker = serializer.save()
+
+        # Same rule as the HTML form: the serializer cannot write `status` at
+        # all, and staff are promoted afterwards by this view. A request that
+        # merely CLAIMS to be staff changes nothing — this reads the
+        # authenticated session, not the payload.
+        if request.user.is_authenticated and request.user.is_staff:
+            sticker.status = Sticker.Status.PUBLISHED
+            sticker.save(update_fields=['status', 'updated_at'])
+            detail = 'Published — it is on the sheet.'
+        else:
+            detail = 'Thanks — your sticker is in the queue for review.'
+
         return Response(
             {'ok': True,
              'id': sticker.pk,
              'status': sticker.status,
-             'detail': 'Thanks — your sticker is in the queue for review.'},
+             'detail': detail},
             status=201)

@@ -1,0 +1,53 @@
+{% load static %}{% comment %}
+The one and only navbar. This markup used to be copy-pasted into every static
+page on dipstick.earth ("Shared chrome is duplicated, not templated" — the old
+CLAUDE.md) and then copied again into the sticker site. Having exactly one
+copy is most of the reason the two sites were merged, and
+test_one_navbar_for_every_page keeps it that way.
+
+`nav` in the context marks the current entry; the pages set it in their view.
+
+The three links that leave the site (the two wiki pages and Discord) open in
+a new tab, with rel="noopener" so the opened page gets no window.opener
+handle back to this one.
+{% endcomment %}
+<nav class="navbar navbar-expand-md fixed-top py-3 navbar-light" id="mainNav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="{% url 'pages:index' %}">
+      <img src="{% static 'assets/img/dipstick-sticker-mark.png' %}"
+           width="62" height="62" alt="dipstick">
+      <span class="visually-hidden">dipstick home</span>
+    </a>
+    <button data-bs-toggle="collapse" class="navbar-toggler" data-bs-target="#navcol-1"
+            aria-controls="navcol-1" aria-expanded="false">
+      <span class="visually-hidden">Toggle navigation</span>
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navcol-1">
+      <ul class="navbar-nav mx-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://wiki.dipstick.earth/index.php/Assembly_Guide"
+             target="_blank" rel="noopener noreferrer">Assembly Guide</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://wiki.dipstick.earth/index.php/Open-Source_Design_page"
+             target="_blank" rel="noopener noreferrer">DIY</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://discord.gg/EEsUhCmjTG"
+             target="_blank" rel="noopener noreferrer">Community</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{% if nav == 'gallery' %} active{% endif %}"
+             href="{% url 'stickers:sheet' %}">dipstickers</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{% if nav == 'contacts' %} active{% endif %}"
+             href="{% url 'pages:contacts' %}">Contact us</a>
+        </li>
+      </ul>
+      <button class="btn btn-primary" type="button"
+              data-bs-toggle="modal" data-bs-target="#signup">follow for updates</button>
+    </div>
+  </div>
+</nav>

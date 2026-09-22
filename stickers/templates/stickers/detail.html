@@ -1,7 +1,7 @@
 {% extends 'stickers/base.html' %}
 {% load stickerfx %}
 
-{% block title %}{{ sticker.species.common_name }} — dipstick sticker sheet{% endblock %}
+{% block title %}{{ sticker.species.common_name }} — dipstickers{% endblock %}
 {% block description %}{{ sticker.display_caption|default:sticker.species.common_name }}{% endblock %}
 {% block og_title %}{{ sticker.species.common_name }}{% endblock %}
 {% block og_description %}{{ sticker.display_caption|default:sticker.species.common_name }}{% endblock %}
@@ -9,7 +9,7 @@
 
 {% block content %}
 <main class="ss-detail">
-  <a class="ss-back" href="{% url 'stickers:sheet' %}">← the sheet</a>
+  <a class="ss-back" href="{% url 'stickers:sheet' %}">← dipsticker sheet</a>
 
   <div class="ss-detail__grid">
     <div class="ss-detail__media">
@@ -32,29 +32,23 @@
       {% endif %}
       {% if sticker.caption %}<p class="ss-detail__caption">{{ sticker.caption }}</p>{% endif %}
 
+      {% comment %}
+      Group is hidden along with the sheet's filter chips — see
+      STICKER_SHEET_SHOW_FILTERS. The whole list is guarded too, so it cannot
+      render as an empty bordered box when a sticker has no credit, place or
+      date either.
+      {% endcomment %}
+      {% if sticker.wildlife_investigator or sticker.location or sticker.captured_at or show_filters %}
       <dl class="ss-facts">
         {% if sticker.wildlife_investigator %}
           <dt>Found by</dt><dd>{{ sticker.wildlife_investigator }}</dd>{% endif %}
         {% if sticker.location %}<dt>Where</dt><dd>{{ sticker.location }}</dd>{% endif %}
         {% if sticker.captured_at %}<dt>When</dt><dd>{{ sticker.captured_at|date:"j F Y" }}</dd>{% endif %}
-        <dt>Group</dt><dd>{{ sticker.species.get_group_display }}</dd>
+        {% if show_filters %}
+          <dt>Group</dt><dd>{{ sticker.species.get_group_display }}</dd>{% endif %}
       </dl>
-
-      {% if sticker.sticker_url %}
-        <div class="ss-diecut">
-          <img class="ss-diecut__img" src="{{ sticker.sticker_url }}"
-               alt="Die-cut sticker of {{ sticker.species.common_name }}"
-               width="1024" height="1024" loading="lazy">
-          <a class="ss-btn ss-btn--yellow" href="{{ sticker.sticker_url }}" download>
-            download the sticker
-          </a>
-        </div>
       {% endif %}
 
-      {% if sticker.latitude and sticker.longitude %}
-        <iframe class="ss-map" loading="lazy" title="Map of {{ sticker.location }}"
-          src="https://www.openstreetmap.org/export/embed.html?bbox={{ sticker.longitude|add:'-0.02'|stringformat:'s' }}%2C{{ sticker.latitude|add:'-0.02'|stringformat:'s' }}%2C{{ sticker.longitude|add:'0.02'|stringformat:'s' }}%2C{{ sticker.latitude|add:'0.02'|stringformat:'s' }}&amp;marker={{ sticker.latitude }}%2C{{ sticker.longitude }}"></iframe>
-      {% endif %}
     </div>
   </div>
 

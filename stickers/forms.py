@@ -3,6 +3,7 @@ import os
 from django import forms
 from django.core.exceptions import ValidationError
 
+from . import imaging, shapes
 from .models import Species, Sticker
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024  # 64 MB — phone video off a dipstick
@@ -41,8 +42,12 @@ class SubmitStickerForm(forms.ModelForm):
 
     class Meta:
         model = Sticker
-        fields = ('media', 'caption', 'wildlife_investigator', 'location',
-                  'captured_at', 'submitter_email')
+        # shape/focal_x/focal_y/zoom are driven by the framing editor and
+        # rendered as hidden inputs; they are safe to accept because each is
+        # validated below and none of them can affect moderation.
+        fields = ('media', 'shape', 'focal_x', 'focal_y', 'zoom', 'caption',
+                  'wildlife_investigator', 'location', 'captured_at',
+                  'submitter_email')
         labels = {
             'media': 'Photo or video',
             'caption': 'Caption',
@@ -59,6 +64,10 @@ class SubmitStickerForm(forms.ModelForm):
                                'submission. Never shown on the site.',
         }
         widgets = {
+            'shape': forms.HiddenInput(),
+            'focal_x': forms.HiddenInput(),
+            'focal_y': forms.HiddenInput(),
+            'zoom': forms.HiddenInput(),
             'captured_at': forms.DateInput(attrs={'type': 'date'}),
             'caption': forms.TextInput(
                 attrs={'placeholder': 'sidestepping under a rock'}),
@@ -67,6 +76,35 @@ class SubmitStickerForm(forms.ModelForm):
             'wildlife_investigator': forms.TextInput(
                 attrs={'placeholder': 'Ada L.'}),
         }
+
+    def clean_shape(self):
+        """Only an outline we actually ship; blank means let the server pick."""
+        value = (self.cleaned_data.get('shape') or '').strip()
+        if not value:
+            return ''
+        if value not in [slug for slug, _ in shapes.available()]:
+            raise ValidationError('That is not one of the sticker shapes.')
+        return value
+
+    def _clean_unit(self, name):
+        value = self.cleaned_data.get(name)
+        if value is None:
+            return 0.5
+        return min(max(float(value), 0.0), 1.0)
+
+    def clean_focal_x(self):
+        return self._clean_unit('focal_x')
+
+    def clean_focal_y(self):
+        return self._clean_unit('focal_y')
+
+    def clean_zoom(self):
+        value = self.cleaned_data.get('zoom')
+        if value is None:
+            return 1.0
+        # Below 1.0 is zoomed out (padded, not cropped). Same range as the
+        # slider and as imaging.focal_crop.
+        return min(max(float(value), imaging.MIN_ZOOM), imaging.MAX_ZOOM)
 
     def clean_website(self):
         if self.cleaned_data.get('website'):
@@ -87,3 +125,29 @@ class SubmitStickerForm(forms.ModelForm):
         if commit:
             sticker.save()
         return sticker
+
+
+class ReframeForm(forms.ModelForm):
+    """
+    Staff-only re-cut of an existing sticker.
+
+    Deliberately narrow: only the framing. Status, media and credits are not
+    here, so a re-frame cannot accidentally publish something or rewrite who
+    took the picture.
+    """
+
+    class Meta:
+        model = Sticker
+        fields = ('shape', 'focal_x', 'focal_y', 'zoom')
+        widgets = {
+            'shape': forms.HiddenInput(),
+            'focal_x': forms.HiddenInput(),
+            'focal_y': forms.HiddenInput(),
+            'zoom': forms.HiddenInput(),
+        }
+
+    clean_shape = SubmitStickerForm.clean_shape
+    _clean_unit = SubmitStickerForm._clean_unit
+    clean_focal_x = SubmitStickerForm.clean_focal_x
+    clean_focal_y = SubmitStickerForm.clean_focal_y
+    clean_zoom = SubmitStickerForm.clean_zoom

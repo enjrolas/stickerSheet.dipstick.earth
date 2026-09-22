@@ -7,15 +7,17 @@ get the same die-cut edge as a photo.
 multi-line one is not treated as a comment at all: it renders as page text.
 {% endcomment %}
 <article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg;
-    --shape: url('{{ s.shape_svg_url }}'); --shape-mask: url('{{ s.shape_mask_url }}')">
+    --shape: url('{{ s.shape_outline_url }}'); --shape-mask: url('{{ s.shape_mask_url }}')
+    {% with c=s.live_crop %}{% if c %}; --cw: {{ c.0|floatformat:3 }}%; --ch: {{ c.1|floatformat:3 }}%; --cl: {{ c.2|floatformat:3 }}%; --ct: {{ c.3|floatformat:3 }}%{% endif %}{% endwith %}">
   <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
     <div class="ss-sticker__die">
+      <div class="ss-sticker__clip">
       {% if s.is_video %}
-        <video class="ss-sticker__media" muted loop playsinline preload="none"
+        <video class="ss-sticker__media ss-sticker__media--live" muted loop playsinline preload="none"
                {% if s.poster_url %}poster="{{ s.poster_url }}"{% endif %}
                data-src="{{ s.media.url }}" aria-label="{{ s.species.common_name }}"></video>
       {% elif s.is_gif %}
-        <img class="ss-sticker__media is-loaded" src="{{ s.media.url }}"
+        <img class="ss-sticker__media ss-sticker__media--live is-loaded" src="{{ s.media.url }}"
              alt="{{ s.species.common_name }}{% if s.caption %} — {{ s.caption }}{% endif %}"
              loading="lazy">
       {% else %}
@@ -26,6 +28,7 @@ multi-line one is not treated as a comment at all: it renders as page text.
              width="640" height="640"
              {% if forloop.counter <= 8 %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
       {% endif %}
+      </div>
       {% if s.is_animated %}<span class="ss-sticker__moving" aria-hidden="true"></span>{% endif %}
     </div>
     {% if show_name|default_if_none:True %}

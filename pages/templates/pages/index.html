@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}the dipstick{% endblock %}
+{% block description %}Dipstick: a tentacle camera for filming underwater animals{% endblock %}
+{% block og_title %}the dipstick{% endblock %}
+{% block og_description %}Dipstick: a tentacle camera for filming underwater animals{% endblock %}
+
+{% block content %}
+    <header class="ds-hero">
+        <div class="container">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-5 ds-hero__col">
+                    <h1 class="ds-display ds-hero__word ds-anim ds-anim--1">
+                        <span class="ds-hero__the">the</span>dipstick
+                    </h1>
+                    <p class="ds-hero__tag ds-anim ds-anim--2">Tentacle cameras for exploring the underwater world.</p>
+                    <div class="ds-hero__actions ds-anim ds-anim--3">
+                        <a class="ds-btn" href="/kickstarter/">Support us on Kickstarter</a>
+                        <a class="ds-btn ds-btn--paper" href="#diy">Build your own</a>
+                        <a class="ds-btn ds-btn--paper" href="https://discord.gg/EEsUhCmjTG">Join the Discord</a>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="ds-snap ds-hero__snap ds-anim ds-anim--2">
+                        <img src="{% static 'assets/img/axolotl.jpg' %}" alt="A dipstick camera with a blue bendy neck dipped into an aquarium beside a pale axolotl.">
+                        <img class="ds-hero__badge" src="{% static 'assets/img/dipstick-transparent.webp' %}" alt="">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="ds-section">
+        <div class="container">
+            <div class="ds-carousel">
+                <div class="carousel slide" data-bs-ride="false" id="carousel-1">
+                    <div class="carousel-inner">
+                        <div class="carousel-item active"><img class="w-100 d-block" src="{% static 'assets/img/tidepool-dusk.jpg' %}" alt="At dusk, someone standing on rocks lowers a lit dipstick into a tidepool, the sunset over the water behind them."></div>
+                        <div class="carousel-item"><img class="w-100 d-block" src="{% static 'assets/img/frozen-lake.jpg' %}" alt="Seen from above, two people in a small boat dip a stick into a partly frozen lake ringed by bare trees."></div>
+                        <div class="carousel-item"><img class="w-100 d-block" src="{% static 'assets/img/plant-wall.jpg' %}" alt="Someone sitting beside a living plant wall, guiding a dipstick in among the leaves."></div>
+                        <div class="carousel-item"><video class="w-100 d-block ds-portrait" muted playsinline preload="none" poster="assets/video/jellyfish-poster.jpg" aria-label="Underwater footage of a lion's mane jellyfish trailing long pale tentacles.">
+                            <source src="{% static 'assets/video/jellyfish.webm' %}" type="video/webm">
+                            <source src="{% static 'assets/video/jellyfish.mp4' %}" type="video/mp4">
+                            <img class="w-100 d-block ds-portrait" src="{% static 'assets/video/jellyfish-poster.jpg' %}" alt="Underwater footage of a lion's mane jellyfish trailing long pale tentacles.">
+                        </video></div>
+                        <div class="carousel-item"><img class="w-100 d-block" src="{% static 'assets/img/burrow.jpg' %}" alt="A yellow-necked dipstick threaded through a sandy burrow set."></div>
+                        <div class="carousel-item"><video class="w-100 d-block" muted playsinline preload="none" poster="assets/video/dipstick-poster.jpg" aria-label="A dipstick held by its handle with a phone mounted on top, showing the flexible yellow neck.">
+                            <source src="{% static 'assets/video/dipstick.webm' %}" type="video/webm">
+                            <source src="{% static 'assets/video/dipstick.mp4' %}" type="video/mp4">
+                            <img class="w-100 d-block" src="{% static 'assets/video/dipstick-poster.jpg' %}" alt="A dipstick held by its handle with a phone mounted on top, showing the flexible yellow neck.">
+                        </video></div>
+                    </div>
+                    <div>
+                        <a class="carousel-control-prev" href="#carousel-1" role="button" data-bs-slide="prev"><span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">Previous</span></a>
+                        <a class="carousel-control-next" href="#carousel-1" role="button" data-bs-slide="next"><span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">Next</span></a>
+                    </div>
+                    <div class="carousel-indicators">
+                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="0" class="active" aria-label="Tidepool at dusk"></button>
+                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="1" aria-label="Frozen lake"></button>
+                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="2" aria-label="Plant wall"></button>
+                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="3" aria-label="Jellyfish footage"></button>
+                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="4" aria-label="Burrow"></button>
+                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="5" aria-label="The dipstick in hand"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ds-section pt-0">
+        <div class="container">
+            <div class="ds-stickers">
+                <div class="ds-sticker">
+                    <img src="{% static 'assets/img/explore.webp' %}" alt="">
+                    <p>Get into tiny places and look around — tidepools, tanks, and mysterious holes.</p>
+                </div>
+                <div class="ds-sticker">
+                    <img src="{% static 'assets/img/get-close.webp' %}" alt="">
+                    <p>The auto-focus camera gets right up to the action, for an eel's eye view.</p>
+                </div>
+                <div class="ds-sticker">
+                    <img src="{% static 'assets/img/byop.webp' %}" alt="">
+                    <p>Bring your own phone for the viewfinder. No extra screen to carry or charge.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ds-section ds-diy" id="diy">
+        <div class="container">
+            <div class="row g-4 align-items-end">
+                <div class="col-md-6">
+                    <h2 class="ds-h2">Make your own dipstick</h2>
+                </div>
+                <div class="col-md-6">
+                    <p class="ds-lede mb-0">Dipsticks are open-source hardware. The design files, bill of materials and manufacturing files are all free to download, build at home, modify and adapt.</p>
+                </div>
+            </div>
+            <div class="ds-parts">
+                <a class="ds-part" href="https://a360.co/4uPCcBG">
+                    <span class="ds-part__art"><img src="{% static 'assets/img/design.webp' %}" alt=""></span>
+                    <span class="ds-part__label">Design files</span>
+                </a>
+                <a class="ds-part" href="https://docs.google.com/spreadsheets/d/1ELhFULFvB04gCrmjGVm6m0QyccByxWnv2C1fsJ5WtCo/edit?usp=sharing">
+                    <span class="ds-part__art"><img src="{% static 'assets/img/BOM.webp' %}" alt=""></span>
+                    <span class="ds-part__label">Bill of materials</span>
+                </a>
+                <a class="ds-part" href="https://wiki.dipstick.earth/index.php/Manufacturing_files">
+                    <span class="ds-part__art"><img src="{% static 'assets/img/manufacturing.webp' %}" alt=""></span>
+                    <span class="ds-part__label">Manufacturing files</span>
+                </a>
+                <a class="ds-part" href="https://wiki.dipstick.earth/index.php/Assembly_Guide">
+                    <span class="ds-part__art"><img src="{% static 'assets/img/components.webp' %}" alt=""></span>
+                    <span class="ds-part__label">Assembly guide</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="ds-section" id="contact">
+        <div class="container">
+            <div class="ds-cta">
+                <div>
+                    <h2 class="ds-display">Interested in contributing?</h2>
+                    <p>Email hello (at) dipstick.earth, or <a href="https://discord.gg/EEsUhCmjTG">join our Discord</a>.</p>
+                </div>
+                <a class="ds-btn ds-btn--paper" role="button" href="{% url 'pages:contacts' %}">Contact us</a>
+            </div>
+        </div>
+    </section>
+
+    
+{% endblock %}
+
+{% block extra_js %}
+{# Only this page has a carousel. #}
+<script src="{% static 'assets/js/carousel-autoplay.js' %}" defer></script>
+{% endblock %}

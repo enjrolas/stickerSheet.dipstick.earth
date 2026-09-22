@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kickstarter - the dipstick{% endblock %}
+{% block description %}{% endblock %}
+{% block og_title %}the dipstick on Kickstarter{% endblock %}
+{% block og_description %}Our crowdfunding campaign is coming soon. Join the mailing list and we'll let you know the moment it launches.{% endblock %}
+
+{% block content %}
+    <header class="ds-hero">
+        <div class="container pt-4 pt-xl-5">
+            <div class="row pt-5">
+                <div class="col-md-8 text-center mx-auto">
+                    <div class="text-center py-4 py-xl-5">
+                        <img src="/assets/img/dipstick-mark.png" alt="dipstick" style="height: 120px; width: auto;" class="mb-4">
+                        <h1 class="ds-display ds-h2 mb-4">Campaign coming soon</h1>
+                        <p class="ds-lede mb-5">Our crowdfunding campaign for the dipstick isn't live yet. Join our mailing list and we'll let you know the moment it launches.</p>
+                        <button class="ds-btn" type="button" data-bs-toggle="modal" data-bs-target="#signup">Join our mailing list</button>
+                        <p class="mt-4 mb-0"><a href="/">&larr; Back to dipstick.earth</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+{% endblock %}
