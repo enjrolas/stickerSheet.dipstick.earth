@@ -14,7 +14,12 @@
 
   var IMAGE_MS = 5000;
 
-  var root = document.querySelector('#carousel-1');
+  /* Runs for EVERY carousel on the page. It used to hard-code #carousel-1,
+     which was fine while there was one — then the home page gained a second
+     ("how it works" and "what you can see"), both were renamed, and nothing
+     autoplayed at all: every clip sat on its poster. Selecting by class means
+     a third carousel needs no change here. */
+  function setup(root) {
   if (!root || !window.bootstrap || !window.bootstrap.Carousel) return;
 
   var carousel = window.bootstrap.Carousel.getOrCreateInstance(root, {
@@ -114,4 +119,8 @@
   else if (reduce.addListener) reduce.addListener(onReduceChange);
 
   schedule();   // no slid event fires for the slide already on screen
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll('.carousel.slide'), setup);
 })();

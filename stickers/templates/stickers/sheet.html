@@ -7,6 +7,9 @@
   <p class="ss-hero__tagline">
     90s stickers of animals filmed with dipsticks
   </p>
+  <p class="ss-hero__playlink">
+    <a href="{% url 'sticker-sheet' %}">Peel them off and stick them down &rarr;</a>
+  </p>
 
 {% if show_filters %}
   <form class="ss-filter" method="get" action="{% url 'stickers:sheet' %}" role="search">

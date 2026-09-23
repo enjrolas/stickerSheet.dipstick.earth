@@ -531,3 +531,168 @@ a { text-underline-offset: .18em; text-decoration-thickness: 2px; }
   .ds-modal .modal-content { padding: 1.5rem; }
   .ds-field-row { grid-template-columns: 1fr; }
 }
+
+
+/* Kickstarter hero ---------------------------------------------------------
+   The sticker art carries its own die-cut white border, so it wants no frame
+   or card around it — same treatment as the stickers on the sheet: dropped
+   straight onto the paper with a hard offset shadow that follows the cut.
+   Shipped at 680px for a ~340px display, per the 2x rule. */
+.ks-hero__art {
+  display: block;
+  width: min(340px, 72vw);
+  height: auto;
+  margin-inline: auto;
+  filter: drop-shadow(7px 7px 0 var(--ink));
+}
+
+
+/* The explainer sticker ----------------------------------------------------
+   A big rectangular sticker holding the "what is a dipstick" copy. Same
+   die-cut language as the rest of the site — white vinyl edge, ink keyline,
+   hard offset shadow — and set at a slight angle so it reads as something
+   stuck onto the page rather than a content box drawn on it. */
+.ds-explainer {
+  /* 85% of the PAGE, not of the container it happens to sit in: it breaks
+     out of .container by centring on the viewport instead. Tilted the other
+     way from the stickers above it, so the two do not look like a pattern. */
+  width: 85vw;
+  max-width: 85vw;
+  margin-left: 50%;
+  padding: clamp(22px, 4vw, 38px) clamp(26px, 5vw, 56px);
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: var(--pop);
+  transform: translateX(-50%) rotate(1.1deg);
+}
+.ds-explainer__text {
+  margin: 0;
+  max-width: 68ch;      /* the box is wide; the reading line should not be */
+  margin-inline: auto;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(1.1rem, 2.3vw, 1.5rem);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* Section headings for the two carousels ---------------------------------- */
+.ds-section__title {
+  margin: 0 0 1.1rem;
+  text-align: center;
+}
+.ds-section__more {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 700;
+}
+.ds-carousel__caption {
+  margin: .7rem 0 0;
+  text-align: center;
+  font-size: .92rem;
+  color: var(--ink-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-explainer { transform: translateX(-50%); }
+}
+
+
+/* The three stickers sit inside "how it works", under that section's
+   carousel, rather than in a section of their own — so they need a little
+   air above them where the section padding used to provide it. */
+.ds-carousel + .ds-stickers { margin-top: clamp(1.4rem, 3vw, 2.4rem); }
+
+
+/* The rule between "how it works" and "what you can see" ------------------ */
+.ds-rule {
+  max-width: 85vw;
+  margin: clamp(1.2rem, 3vw, 2.2rem) auto clamp(2rem, 4vw, 3rem);
+  border: 0;
+  border-top: var(--rule);
+  opacity: 1;            /* Bootstrap fades <hr> to .25 by default */
+}
+
+
+/* The open-source-hardware mark, beside the DIY copy it belongs to. It sits
+   on the cream ground like everything else here, no card around it. */
+.ds-oshw {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(14px, 2.2vw, 22px);
+}
+.ds-oshw__mark {
+  flex: 0 0 auto;
+  display: block;
+  line-height: 0;
+  transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+}
+.ds-oshw__mark:hover { transform: rotate(-8deg) scale(1.08); }
+.ds-oshw__mark img { width: clamp(52px, 6vw, 68px); height: auto; display: block; }
+.ds-oshw__mark:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+
+@media (max-width: 575.98px) {
+  .ds-oshw { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-oshw__mark, .ds-oshw__mark:hover { transition: none; transform: none; }
+}
+
+/* The Dipper Keeper -------------------------------------------------------
+   "What you can see" is a folder with the stickers stuck all over it. The
+   panel holds the image's own aspect ratio so the percentage placements land
+   where they were chosen to; a fixed height would slide them about. */
+.ds-keeper {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  margin-inline: auto;
+  aspect-ratio: 1.0623;          /* the trimmed artwork's ratio */
+  background-image: url('../img/dipper-keeper.jpg');
+  background-size: cover;
+  background-position: center;
+  border: var(--rule);
+  border-radius: 10px;
+  box-shadow: var(--pop);
+  overflow: hidden;
+}
+
+.ds-keeper__stuck {
+  position: absolute;
+  /* --tilt comes from the scatter filter, per sticker. */
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform .18s ease;
+}
+.ds-keeper__stuck:hover {
+  transform: rotate(0deg) scale(1.06);
+  z-index: 2;
+}
+/* Inside the keeper the cards are bare art: no tilt of their own (the slot
+   supplies it) and no name plate, which would be unreadable on splatter. */
+.ds-keeper__stuck .ss-sticker { --tilt: 0deg; }
+.ds-keeper__stuck .ss-sticker__die { transform: none; }
+.ds-keeper__stuck .ss-sticker__link:hover .ss-sticker__die { transform: none; }
+.ds-keeper__stuck .ss-sticker__by { display: none; }
+/* Decoration, not navigation: no pointer, no link affordance. The name is
+   the tooltip instead. */
+.ds-keeper__stuck .ss-sticker__link--static { cursor: default; display: block; }
+
+/* Compound selector on purpose. sheet.css loads after this file and sets
+   .ss-sheet { display: grid } at the same specificity, which won on source
+   order and left the fallback grid showing under the keeper — every sticker
+   rendered twice. */
+.ds-keeper__fallback.ss-sheet { display: none; }
+
+/* Below this the keeper is too small to scatter into — the stickers would
+   overlap into a pile — so it steps back to the ordinary sheet. */
+@media (max-width: 700px) {
+  .ds-keeper { display: none; }
+  .ds-keeper__fallback.ss-sheet { display: grid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-keeper__stuck, .ds-keeper__stuck:hover { transition: none; }
+}

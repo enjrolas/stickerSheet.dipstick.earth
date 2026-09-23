@@ -50,11 +50,14 @@ a:hover { color: var(--ink); }
    marketing pages. Only the gallery-specific offset stays.
 
    The nav is fixed-top, so these pages have to start below it. The marketing
-   pages do the same job with .ds-hero's top padding. */
-body { padding-top: 6.5rem; }
+   pages do the same job with .ds-hero's own top padding — and since the home
+   page now loads this stylesheet too (for the sticker cards), the offset is
+   scoped to a class rather than applied to every body that sees this file.
+   Unscoped it stacked with the hero's padding and left a chasm at the top. */
+.ss-page { padding-top: 6.5rem; }
 
 @media (max-width: 767.98px) {
-  body { padding-top: 5.5rem; }
+  .ss-page { padding-top: 5.5rem; }
 }
 
 /* --- buttons -------------------------------------------------------------- */
@@ -92,6 +95,13 @@ body { padding-top: 6.5rem; }
   line-height: 1.15; letter-spacing: -.01em;
   text-wrap: balance;
 }
+
+.ss-hero__playlink {
+  margin: 0 0 18px;
+  font-family: var(--display); font-weight: 700; font-size: 1.02rem;
+}
+.ss-hero__playlink a { color: var(--grape); }
+.ss-hero__playlink a:hover { color: var(--ink); }
 
 .ss-hero__blurb {
   max-width: 46ch; font-size: 1.12rem; line-height: 1.55;
@@ -590,21 +600,35 @@ body { padding-top: 6.5rem; }
 
 /* The tray sits IN the layout rather than floating over it, so the rule at
    the bottom of the page is pushed below it instead of being overlapped. */
+/* Full width, not a centred column: the sheet belongs at the left edge of
+   the PAGE, not at the left edge of a 1180px box floating in the middle of
+   it. The reading width is kept on .sk__head instead, so the copy does not
+   stretch across a wide monitor. */
 .sk {
-  max-width: 1180px; margin: 0 auto; padding: 20px 20px 16px;
+  max-width: none; margin: 0; padding: 20px 20px 16px;
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
   gap: 14px 22px;
   align-items: start;
 }
-.sk__head { grid-column: 2; grid-row: 1; }
-.sk__head { margin-bottom: 18px; max-width: 46ch; }
+/* The instructions live in a box in the top-right corner, out of the way of
+   the sheet on the left and of the space you are sticking things onto. */
+.sk__head {
+  grid-column: 2; grid-row: 1;
+  justify-self: end;
+  max-width: 38ch;
+  margin: 0;
+  border: var(--rule); border-radius: 14px;
+  background: var(--paper-deep);
+  box-shadow: var(--pop-sm);
+  padding: 13px 17px;
+}
 .sk__lede {
   margin: 0;
   font-family: var(--display); font-weight: 700;
-  font-size: clamp(1.1rem, 2.6vw, 1.55rem);
-  line-height: 1.3; text-wrap: balance;
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.35; text-wrap: balance;
 }
 
 /* the tray -------------------------------------------------------------- */
@@ -632,6 +656,7 @@ body { padding-top: 6.5rem; }
 .sk__peel {
   position: relative;
   border: 0; background: none; padding: 4px; cursor: grab;
+  touch-action: none;   /* peeling is a drag, not a scroll */
   border-radius: 10px;
   transition: transform .12s ease;
 }
@@ -643,8 +668,15 @@ body { padding-top: 6.5rem; }
 
 @media (max-width: 900px) {
   .sk { grid-template-columns: 1fr; }
-  .sk__head { grid-column: 1; }
-  .sk__tray { grid-column: 1; grid-row: auto; height: 40vh; }
+  .sk__head { grid-column: 1; justify-self: stretch; max-width: none; }
+  .sk__tray {
+    grid-column: 1; grid-row: auto;
+    height: 34vh;
+    /* Bigger targets: a 62px sticker is an awkward thing to hit with a
+       thumb, and there is width to spare in a single column. */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .sk__keys { display: none; }   /* no shift key, no wheel */
 }
 
 /* a placed sticker ------------------------------------------------------- */
@@ -652,6 +684,9 @@ body { padding-top: 6.5rem; }
   position: absolute;
   cursor: grab;
   pointer-events: auto;   /* the one thing on the layer that IS clickable */
+  /* Without this, dragging a sticker on a touchscreen scrolls the page
+     instead — the browser claims the gesture before the handlers see it. */
+  touch-action: none;
   user-select: none; -webkit-user-drag: none;
   filter: drop-shadow(4px 4px 0 rgba(20, 18, 16, .55));
   will-change: transform;
@@ -666,8 +701,7 @@ body { padding-top: 6.5rem; }
   grid-column: 1 / -1; grid-row: 3;
   display: flex; flex-wrap: wrap; gap: 12px;
   align-items: center; justify-content: space-between;
-  padding: 14px 0 0;
-  border-top: var(--rule);
+  padding: 12px 0 0;
 }
 .sk__keys { display: flex; flex-wrap: wrap; gap: 14px; font-size: .84rem;
             color: var(--ink-soft); }
@@ -777,6 +811,12 @@ body { padding-top: 6.5rem; }
   background: var(--yellow);
   box-shadow: inset 2px 2px 0 rgba(20,18,16,.25), var(--pop-sm);
 }
+.sk__touch-keys { display: none; margin: 0; font-size: .84rem;
+                  color: var(--ink-soft); }
+@media (max-width: 900px) {
+  .sk__touch-keys { display: block; }
+}
+
 .sk__music-note {
   font-size: .82rem; color: var(--ink-soft); margin: 0;
   flex-basis: 100%;
@@ -790,4 +830,13 @@ body { padding-top: 6.5rem; }
   .sk-music .sk__stuck-clip,
   .sk-music .sk__stuck-spin { animation: none; }
   .sk__stuck { transition: none; }
+}
+
+
+/* The sheet of dipstickers embedded on the home page. Roomier than the
+   gallery's own grid: it is a taste of the sheet, not the sheet. */
+.ss-sheet--home {
+  padding: 8px 0 0;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 30px 24px;
 }

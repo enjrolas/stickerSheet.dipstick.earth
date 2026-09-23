@@ -104,10 +104,9 @@
       media.autoplay = true; media.preload = 'auto';
       if (d.poster) { media.poster = d.poster; }
       media.src = d.media;
-      // Autoplay can be refused; the poster then stands in, which is still a
-      // perfectly good sticker.
-      var playing = media.play();
-      if (playing && playing.catch) { playing.catch(function () {}); }
+      // play() is called after the element is in the document, not here —
+      // a video that is not yet in the DOM will not start, and the sticker
+      // would sit on its poster.
     } else {
       media = document.createElement('img');
       media.src = d.media || d.src;      // GIFs keep the original, so they move
@@ -174,6 +173,15 @@
     canvas.appendChild(el);
     items.push(it);
     draw(it);
+
+    // Now that it is in the document, get it moving. Autoplay can still be
+    // refused (battery saver, reduced data); the poster then stands in,
+    // which is a perfectly good sticker.
+    var video = el.querySelector && el.querySelector('video');
+    if (video) {
+      var playing = video.play();
+      if (playing && playing.catch) { playing.catch(function () {}); }
+    }
     return it;
   }
 
@@ -223,6 +231,7 @@
 
   /* ---- dragging, rotating ---------------------------------------------- */
   var drag = null;
+  var peeled = false;   // a pointer peel just happened; skip the click
 
   /* Document coordinates, not viewport ones. A sticker is stuck to the PAGE,
      so it has to stay put when you scroll — and the layer starts at the top
@@ -243,6 +252,14 @@
     it.z = ++topZ;
     draw(it);
 
+    // Remember every finger on this sticker, so a second one starts a pinch.
+    it._pointers = it._pointers || {};
+    it._pointers[e.pointerId] = canvasPoint(e);
+    if (Object.keys(it._pointers).length >= 2) {
+      onPinchStart(it);
+      return;
+    }
+
     var p = canvasPoint(e);
     drag = {
       it: it,
@@ -257,6 +274,11 @@
   }
 
   function onMove(e) {
+    if (pinch && pinch.it._pointers[e.pointerId]) {
+      pinch.it._pointers[e.pointerId] = canvasPoint(e);
+      onPinchMove();
+      return;
+    }
     if (!drag) { return; }
     var p = canvasPoint(e);
     // Shift is read live, so you can start moving and rotate mid-drag.
@@ -274,7 +296,13 @@
   }
 
   function onDrop(e) {
+    if (pinch) {
+      delete pinch.it._pointers[e.pointerId];
+      if (Object.keys(pinch.it._pointers).length < 2) { pinch = null; save(); }
+      return;
+    }
     if (!drag) { return; }
+    delete drag.it._pointers[e.pointerId];
     drag.it.el.classList.remove('is-held');
     try { drag.it.el.releasePointerCapture(e.pointerId); } catch (err) {}
     drag = null;
@@ -297,6 +325,34 @@
   }
 
   Array.prototype.forEach.call(tray.querySelectorAll('.sk__peel'), function (peel) {
+    /* Pointer events, not HTML5 drag-and-drop. dragstart/drop never fire on
+       a touchscreen, so on a phone the tray was simply dead. Peeling by
+       pointerdown works identically for mouse, trackpad and finger, and it
+       reads better anyway: the sticker comes off under your finger rather
+       than after a drag-image dance.
+
+       dragstart is still wired for desktop, but only as a fallback for the
+       case where a pointer never arrives. */
+    peel.addEventListener('pointerdown', function (e) {
+      if (e.button !== undefined && e.button !== 0) { return; }
+      e.preventDefault();
+      var d = parts(peel);
+      var p = canvasPoint(e);
+      var it = place(d.src, d.name, Math.round(p.x), Math.round(p.y), d);
+      select(it);
+      peeled = true;
+
+      // Hand the drag straight to the new sticker, so it follows the finger
+      // out of the tray in one gesture.
+      drag = {
+        it: it, mode: 'move', dx: 0, dy: 0,
+        startRot: it.rot, startAngle: 0
+      };
+      try { it.el.setPointerCapture(e.pointerId); } catch (err) {}
+      it.el.classList.add('is-held');
+      save();
+    });
+
     peel.addEventListener('dragstart', function (e) {
       e.dataTransfer.setData('text/plain', JSON.stringify(parts(peel)));
       e.dataTransfer.effectAllowed = 'copy';
@@ -304,6 +360,8 @@
     // Clicking also places one, in the middle — dragging is not the only way
     // in, and it is the only way that works from a keyboard.
     peel.addEventListener('click', function () {
+      // A pointer already placed one; this is the keyboard path only.
+      if (peeled) { peeled = false; return; }
       var box = canvas.getBoundingClientRect();
       var d = parts(peel);
       // Centre of the current view, converted to document coordinates —
@@ -363,6 +421,51 @@
       save();
     }
   });
+
+  /* ---- two fingers scale and rotate ---------------------------------------
+     On a phone there is no shift key and no wheel, so pinch is the only way
+     to resize or turn a sticker. Tracked per-sticker rather than globally,
+     so two people (or two hands) cannot fight over one gesture. */
+  var pinch = null;
+
+  function pinchPointers(it) {
+    var ids = Object.keys(it._pointers || {});
+    return ids.length >= 2 ? ids.slice(0, 2) : null;
+  }
+
+  function onPinchStart(it) {
+    var ids = pinchPointers(it);
+    if (!ids) { return; }
+    var a = it._pointers[ids[0]], b = it._pointers[ids[1]];
+    pinch = {
+      it: it,
+      dist: Math.hypot(b.x - a.x, b.y - a.y),
+      angle: Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI,
+      size: it.size,
+      rot: it.rot
+    };
+    drag = null;              // a pinch is not a drag
+  }
+
+  function onPinchMove() {
+    if (!pinch) { return; }
+    var it = pinch.it;
+    var ids = pinchPointers(it);
+    if (!ids) { return; }
+    var a = it._pointers[ids[0]], b = it._pointers[ids[1]];
+    var dist = Math.hypot(b.x - a.x, b.y - a.y);
+    var angle = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    if (pinch.dist > 4) {
+      it.size = Math.max(30, Math.min(400,
+        Math.round(pinch.size * (dist / pinch.dist))));
+    }
+    it.rot = Math.round(pinch.rot + (angle - pinch.angle));
+    if (selected === it) {
+      scaleInput.value = it.size;
+      rotInput.value = it.rot;
+    }
+    draw(it);
+  }
 
   /* ---- shift + wheel resizes ---------------------------------------------
      Shift is already the modifier for rotating mid-drag, and a scroll is a

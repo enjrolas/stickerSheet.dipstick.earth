@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static stickerfx %}
 
 {% block title %}the dipstick{% endblock %}
 {% block description %}Dipstick: a tentacle camera for filming underwater animals{% endblock %}
@@ -31,59 +31,122 @@
         </div>
     </header>
 
-    <section class="ds-section">
+    {% comment %}
+    A big rectangular sticker holding the explanation. Same die-cut language
+    as everything else — white vinyl edge, ink keyline, hard offset shadow —
+    so it reads as something stuck to the page rather than a content box.
+    {% endcomment %}
+    <section class="ds-section pt-0">
         <div class="container">
+            <div class="ds-explainer">
+                <p class="ds-explainer__text">
+                    A dipstick is a tiny camera on the end of a tentacle on
+                    the end of a stick, that lets you look closely at the
+                    natural world. Find hidden secrets of tidepools, rivers
+                    and forests, and share what you find.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="ds-section pt-0" id="how">
+        <div class="container">
+            <h2 class="ds-h2 ds-section__title">How the dipstick works</h2>
             <div class="ds-carousel">
-                <div class="carousel slide" data-bs-ride="false" id="carousel-1">
+                <div class="carousel slide" data-bs-ride="false" id="carousel-how">
                     <div class="carousel-inner">
-                        <div class="carousel-item active"><img class="w-100 d-block" src="{% static 'assets/img/tidepool-dusk.jpg' %}" alt="At dusk, someone standing on rocks lowers a lit dipstick into a tidepool, the sunset over the water behind them."></div>
-                        <div class="carousel-item"><img class="w-100 d-block" src="{% static 'assets/img/frozen-lake.jpg' %}" alt="Seen from above, two people in a small boat dip a stick into a partly frozen lake ringed by bare trees."></div>
-                        <div class="carousel-item"><img class="w-100 d-block" src="{% static 'assets/img/plant-wall.jpg' %}" alt="Someone sitting beside a living plant wall, guiding a dipstick in among the leaves."></div>
-                        <div class="carousel-item"><video class="w-100 d-block ds-portrait" muted playsinline preload="none" poster="assets/video/jellyfish-poster.jpg" aria-label="Underwater footage of a lion's mane jellyfish trailing long pale tentacles.">
-                            <source src="{% static 'assets/video/jellyfish.webm' %}" type="video/webm">
-                            <source src="{% static 'assets/video/jellyfish.mp4' %}" type="video/mp4">
-                            <img class="w-100 d-block ds-portrait" src="{% static 'assets/video/jellyfish-poster.jpg' %}" alt="Underwater footage of a lion's mane jellyfish trailing long pale tentacles.">
+                        {# the cross-section leads: it is the thing that actually explains how it works #}
+                        <div class="carousel-item active"><img class="w-100 d-block" src="{% static 'assets/img/how-it-works.png' %}" alt="An annotated cross-section of the dipstick. At the controller end, a handle you turn to aim, and a capstan the no-stretch cord winds four times around. A phone sits in a ball-end holder, running the dipstick app. A tensioning cap threads onto a PETG spine, and a waterproof endoscope camera clamps into an endcap at the tip."></div>
+                        {% comment %}
+                        Encoded from the 4K original (Dipstick Basics.mp4),
+                        not from the 256-colour GIF that was cut out of it.
+                        No WebM: at this length VP9 came out LARGER than the
+                        H.264 (899 KB against 671 KB), so offering it would
+                        just hand webm-preferring browsers the bigger file.
+                        {% endcomment %}
+                        <div class="carousel-item"><video class="w-100 d-block" muted playsinline preload="none" poster="{% static 'assets/video/how-it-works-poster.jpg' %}" aria-label="Two hands working the dipstick: one turns the handle at the controller end while the blue tentacle at the far end bends in response.">
+                            <source src="{% static 'assets/video/how-it-works.mp4' %}" type="video/mp4">
+                            <img class="w-100 d-block" loading="lazy" decoding="async" src="{% static 'assets/video/how-it-works-poster.jpg' %}" alt="Two hands working the dipstick: one turns the handle at the controller end while the blue tentacle at the far end bends in response.">
                         </video></div>
-                        <div class="carousel-item"><img class="w-100 d-block" src="{% static 'assets/img/burrow.jpg' %}" alt="A yellow-necked dipstick threaded through a sandy burrow set."></div>
-                        <div class="carousel-item"><video class="w-100 d-block" muted playsinline preload="none" poster="assets/video/dipstick-poster.jpg" aria-label="A dipstick held by its handle with a phone mounted on top, showing the flexible yellow neck.">
-                            <source src="{% static 'assets/video/dipstick.webm' %}" type="video/webm">
-                            <source src="{% static 'assets/video/dipstick.mp4' %}" type="video/mp4">
-                            <img class="w-100 d-block" src="{% static 'assets/video/dipstick-poster.jpg' %}" alt="A dipstick held by its handle with a phone mounted on top, showing the flexible yellow neck.">
-                        </video></div>
+                        <div class="carousel-item"><img class="w-100 d-block" loading="lazy" decoding="async" src="{% static 'assets/img/tidepool-dusk.jpg' %}" alt="At dusk, someone standing on rocks lowers a lit dipstick into a tidepool, the sunset over the water behind them."></div>
+                        <div class="carousel-item"><img class="w-100 d-block" loading="lazy" decoding="async" src="{% static 'assets/img/frozen-lake.jpg' %}" alt="Seen from above, two people in a small boat dip a stick into a partly frozen lake ringed by bare trees."></div>
+                        <div class="carousel-item"><img class="w-100 d-block" loading="lazy" decoding="async" src="{% static 'assets/img/plant-wall.jpg' %}" alt="Someone sitting beside a living plant wall, guiding a dipstick in among the leaves."></div>
+                        <div class="carousel-item"><img class="w-100 d-block" loading="lazy" decoding="async" src="{% static 'assets/img/puddle.jpg' %}" alt="Two children in winter coats crouched at the edge of a roadside puddle, dipping a dipstick in among the fallen leaves while bare branches reflect in the water."></div>
                     </div>
                     <div>
-                        <a class="carousel-control-prev" href="#carousel-1" role="button" data-bs-slide="prev"><span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">Previous</span></a>
-                        <a class="carousel-control-next" href="#carousel-1" role="button" data-bs-slide="next"><span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">Next</span></a>
+                        <a class="carousel-control-prev" href="#carousel-how" role="button" data-bs-slide="prev"><span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">Previous</span></a>
+                        <a class="carousel-control-next" href="#carousel-how" role="button" data-bs-slide="next"><span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">Next</span></a>
                     </div>
                     <div class="carousel-indicators">
-                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="0" class="active" aria-label="Tidepool at dusk"></button>
-                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="1" aria-label="Frozen lake"></button>
-                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="2" aria-label="Plant wall"></button>
-                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="3" aria-label="Jellyfish footage"></button>
-                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="4" aria-label="Burrow"></button>
-                        <button type="button" data-bs-target="#carousel-1" data-bs-slide-to="5" aria-label="The dipstick in hand"></button>
+                        <button type="button" data-bs-target="#carousel-how" data-bs-slide-to="0" class="active" aria-label="Annotated cross-section"></button>
+                        <button type="button" data-bs-target="#carousel-how" data-bs-slide-to="1" aria-label="Working the dipstick"></button>
+                        <button type="button" data-bs-target="#carousel-how" data-bs-slide-to="2" aria-label="Tidepool at dusk"></button>
+                        <button type="button" data-bs-target="#carousel-how" data-bs-slide-to="3" aria-label="Frozen lake"></button>
+                        <button type="button" data-bs-target="#carousel-how" data-bs-slide-to="4" aria-label="Plant wall"></button>
+                        <button type="button" data-bs-target="#carousel-how" data-bs-slide-to="5" aria-label="A puddle"></button>
                     </div>
+                </div>
+            </div>
+            <div class="ds-stickers">
+                <div class="ds-sticker">
+                    <img src="{% static 'assets/img/explore.webp' %}" alt="" loading="lazy" decoding="async">
+                    <p>Get into tiny places and look around — tidepools, creeks, and mysterious holes.</p>
+                </div>
+                <div class="ds-sticker">
+                    <img src="{% static 'assets/img/get-close.webp' %}" alt="" loading="lazy" decoding="async">
+                    <p>The auto-focus camera gets right up to the action, for an eel's eye view.</p>
+                </div>
+                <div class="ds-sticker">
+                    <img src="{% static 'assets/img/byop.webp' %}" alt="" loading="lazy" decoding="async">
+                    <p>Bring your own phone for the viewfinder.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="ds-section pt-0">
+    <hr class="ds-rule">
+
+    {% comment %}
+    Not a carousel: these ARE stickers, so they show as a sheet of them. The
+    card partial is the same one the gallery uses — die-cut edge, masked
+    media, video playing where there is video — so this section and
+    /dipstickers/ cannot drift apart. It fills itself as people submit, and
+    falls back to the jellyfish clip while nothing is published.
+    {% endcomment %}
+    <section class="ds-section pt-0" id="sightings">
         <div class="container">
-            <div class="ds-stickers">
-                <div class="ds-sticker">
-                    <img src="{% static 'assets/img/explore.webp' %}" alt="">
-                    <p>Get into tiny places and look around — tidepools, tanks, and mysterious holes.</p>
+            <h2 class="ds-h2 ds-section__title">What you can see with a dipstick</h2>
+            {% if sightings %}
+            {% comment %}
+            Stuck onto a Dipper Keeper, scattered rather than gridded. The
+            placements are fixed, not random: a random layout re-rolls every
+            render, so a sticker would jump between page loads and could land
+            on the wordmark or half off the edge.
+            {% endcomment %}
+            <div class="ds-keeper">
+                {% for s in sightings %}
+                <div class="ds-keeper__stuck" style="{{ forloop.counter0|scatter }}">
+                    {% include 'stickers/_sticker_card.html' with show_name=False unlinked=True %}
                 </div>
-                <div class="ds-sticker">
-                    <img src="{% static 'assets/img/get-close.webp' %}" alt="">
-                    <p>The auto-focus camera gets right up to the action, for an eel's eye view.</p>
-                </div>
-                <div class="ds-sticker">
-                    <img src="{% static 'assets/img/byop.webp' %}" alt="">
-                    <p>Bring your own phone for the viewfinder. No extra screen to carry or charge.</p>
-                </div>
+                {% endfor %}
             </div>
+            <div class="ss-sheet ss-sheet--home ds-keeper__fallback">
+                {% for s in sightings %}
+                    {% include 'stickers/_sticker_card.html' %}
+                {% endfor %}
+            </div>
+            <p class="ds-section__more">
+                <a href="{% url 'stickers:sheet' %}">See every animal anyone has found &rarr;</a>
+            </p>
+            {% else %}
+            <div class="ds-carousel">
+                <video class="w-100 d-block ds-portrait" muted loop playsinline preload="none" poster="{% static 'assets/video/jellyfish-poster.jpg' %}" aria-label="Underwater footage of a lion's mane jellyfish trailing long pale tentacles.">
+                    <source src="{% static 'assets/video/jellyfish.webm' %}" type="video/webm">
+                    <source src="{% static 'assets/video/jellyfish.mp4' %}" type="video/mp4">
+                    <img class="w-100 d-block ds-portrait" src="{% static 'assets/video/jellyfish-poster.jpg' %}" alt="Underwater footage of a lion's mane jellyfish trailing long pale tentacles.">
+                </video>
+            </div>
+            {% endif %}
         </div>
     </section>
 
@@ -94,7 +157,20 @@
                     <h2 class="ds-h2">Make your own dipstick</h2>
                 </div>
                 <div class="col-md-6">
-                    <p class="ds-lede mb-0">Dipsticks are open-source hardware. The design files, bill of materials and manufacturing files are all free to download, build at home, modify and adapt.</p>
+                    <div class="ds-oshw">
+                        {% comment %}
+                        Links to OSHWA rather than sitting there as decoration
+                        — the mark means something, and the certification is
+                        worth being able to check.
+                        {% endcomment %}
+                        <a class="ds-oshw__mark" href="https://www.oshwa.org/"
+                           target="_blank" rel="noopener noreferrer"
+                           title="Open Source Hardware Association">
+                            <img src="{% static 'assets/img/oshw-logo.svg' %}"
+                                 alt="Open source hardware" width="64" height="67">
+                        </a>
+                        <p class="ds-lede mb-0">Dipsticks are open-source hardware. The design files, bill of materials and manufacturing files are all free to download, build at home, modify and adapt.</p>
+                    </div>
                 </div>
             </div>
             <div class="ds-parts">
@@ -133,7 +209,14 @@
     
 {% endblock %}
 
+{% block extra_css %}
+{# the sticker cards on this page are the gallery's component #}
+<link rel="stylesheet" href="{% static 'stickers/css/sheet.css' %}">
+{% endblock %}
+
 {% block extra_js %}
 {# Only this page has a carousel. #}
 <script src="{% static 'assets/js/carousel-autoplay.js' %}" defer></script>
+{# attaches and plays the sticker videos as they come into view #}
+<script src="{% static 'stickers/js/sheet.js' %}" defer></script>
 {% endblock %}

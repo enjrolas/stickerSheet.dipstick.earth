@@ -302,6 +302,12 @@ class Sticker(models.Model):
                         storage_utils.publish(
                             poster, self._derivative_name('.poster.jpg'))
                         self._build_stills(poster)
+                    # A web-sized re-encode. Phone footage is far too big to
+                    # hand to every visitor: one clip was 12 MB.
+                    with storage_utils.temp_path('.compressed.mp4') as small:
+                        if imaging.compress_video(source, small):
+                            storage_utils.publish(
+                                small, self._derivative_name('.compressed.mp4'))
                 else:
                     self._build_stills(source)
         except Exception:
@@ -384,6 +390,19 @@ class Sticker(models.Model):
         return self._lazy('.poster.jpg') or ''
 
     @property
+    def playable_url(self):
+        """
+        What a card should actually load: the web-sized re-encode if there is
+        one, else the original. The detail page deliberately keeps serving the
+        original, where someone has chosen to look closely.
+        """
+        if self.is_video:
+            small = self._lazy('.compressed.mp4')
+            if small:
+                return small
+        return self.media.url if self.media else ''
+
+    @property
     def thumb_url(self):
         return self._lazy('.thumb.jpg') or (self.media.url if self.media else '')
 
@@ -427,7 +446,7 @@ class Sticker(models.Model):
         """
         if delete_file and self.media and self.media.name:
             for suffix in ('.sticker.png', '.thumb.jpg', '.lowres.jpg',
-                           '.poster.jpg'):
+                           '.poster.jpg', '.compressed.mp4'):
                 name = self._derivative_name(suffix)
                 try:
                     if name and default_storage.exists(name):

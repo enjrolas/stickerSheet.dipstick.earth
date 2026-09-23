@@ -29,3 +29,44 @@ DATABASES = {
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# --- Uploads in S3, served through a CDN -----------------------------------
+# Serve media from your own hostname instead of s3.amazonaws.com. Empty means
+# straight from S3, which works but is object storage, not a CDN: every
+# viewer fetches from the bucket's region wherever they are.
+#
+# Whatever goes here must serve the SAME key layout, i.e.
+# https://<MEDIA_DOMAIN>/media/captures/...
+MEDIA_DOMAIN = 'media.dipstick.earth'   # CloudFront in front of the bucket
+
+AWS_ACCESS_KEY_ID = 'AKIA...'
+AWS_SECRET_ACCESS_KEY = '...'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            'bucket_name': 'dipstick.earth',
+            'region_name': 'us-east-1',
+            'access_key': AWS_ACCESS_KEY_ID,
+            'secret_key': AWS_SECRET_ACCESS_KEY,
+            'location': 'media',
+            # REQUIRED, not a preference: the bucket name contains dots, and
+            # *.s3.amazonaws.com does not match dipstick.earth.s3.amazonaws.com
+            # — virtual-host addressing fails TLS outright.
+            'addressing_style': 'path',
+            'custom_domain': MEDIA_DOMAIN,
+            # The bucket has ObjectOwnership=BucketOwnerEnforced, so ACLs are
+            # disabled; public reads come from the bucket policy instead.
+            'default_acl': None,
+            'querystring_auth': False,
+            'file_overwrite': False,
+            'object_parameters': {
+                'CacheControl': 'public, max-age=2592000, immutable',
+            },
+        },
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+    },
+}

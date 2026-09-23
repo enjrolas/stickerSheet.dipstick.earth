@@ -205,6 +205,48 @@ def make_lowres(source_path, out_path, width, framing=None):
     return _finalize(out_path)
 
 
+def compress_video(source_path, out_path, max_width=900):
+    """
+    Re-encode a clip small enough to put on a web page.
+
+    Phone footage arrives enormous — one 12 MB clip was being served whole to
+    every visitor who scrolled past it. This scales the long edge down, drops
+    the audio (every sticker is muted anyway) and moves the moov atom to the
+    front so playback can start before the file has finished arriving.
+
+    CRF 28 at this size is visually fine for something rendered a few hundred
+    pixels wide inside a die-cut. Returns None if ffmpeg fails, and callers
+    fall back to the original rather than showing nothing.
+    """
+    if not out_path:
+        return None
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    cmd = [
+        'ffmpeg', '-y', '-loglevel', 'error', '-i', source_path,
+        '-vf', "scale='min(%d,iw)':-2" % max_width,
+        '-c:v', 'libx264', '-preset', 'slow', '-crf', '28',
+        '-pix_fmt', 'yuv420p',
+        '-an',                          # muted everywhere it is used
+        '-movflags', '+faststart',      # start playing before it all lands
+        out_path,
+    ]
+    try:
+        subprocess.run(cmd, check=True, timeout=900,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        return None
+    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+        return None
+    # A "compressed" file bigger than the original helps nobody.
+    try:
+        if os.path.getsize(out_path) >= os.path.getsize(source_path):
+            os.remove(out_path)
+            return None
+    except OSError:
+        pass
+    return _finalize(out_path)
+
+
 def video_poster(source_path, out_path, at_seconds=1):
     """
     Pull a frame out of a video with ffmpeg so the rest of the pipeline has an

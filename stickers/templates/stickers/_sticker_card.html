@@ -9,13 +9,25 @@ multi-line one is not treated as a comment at all: it renders as page text.
 <article class="ss-sticker" style="--tilt: {{ s.pk|tilt }}deg;
     --shape: url('{{ s.shape_outline_url }}'); --shape-mask: url('{{ s.shape_mask_url }}')
     {% with c=s.live_crop %}{% if c %}; --cw: {{ c.0|floatformat:3 }}%; --ch: {{ c.1|floatformat:3 }}%; --cl: {{ c.2|floatformat:3 }}%; --ct: {{ c.3|floatformat:3 }}%{% endif %}{% endwith %}">
+  {% comment %}
+  `unlinked` renders the card as plain art with the species name as a native
+  tooltip — used on the Dipper Keeper, where a sticker is decoration rather
+  than a way through to anything. The flag is negative on purpose: an include
+  that does not mention it gets a link, so no existing caller changes
+  behaviour by omission.
+  {% endcomment %}
+  {% if unlinked %}
+  <span class="ss-sticker__link ss-sticker__link--static"
+        title="{{ s.species.common_name }}">
+  {% else %}
   <a class="ss-sticker__link" href="{{ s.get_absolute_url }}">
+  {% endif %}
     <div class="ss-sticker__die">
       <div class="ss-sticker__clip">
       {% if s.is_video %}
         <video class="ss-sticker__media ss-sticker__media--live" muted loop playsinline preload="none"
                {% if s.poster_url %}poster="{{ s.poster_url }}"{% endif %}
-               data-src="{{ s.media.url }}" aria-label="{{ s.species.common_name }}"></video>
+               data-src="{{ s.playable_url }}" aria-label="{{ s.species.common_name }}"></video>
       {% elif s.is_gif %}
         <img class="ss-sticker__media ss-sticker__media--live is-loaded" src="{{ s.media.url }}"
              alt="{{ s.species.common_name }}{% if s.caption %} — {{ s.caption }}{% endif %}"
@@ -35,5 +47,5 @@ multi-line one is not treated as a comment at all: it renders as page text.
       <h2 class="ss-sticker__name">{{ s.species.common_name }}</h2>{% endif %}
     {% if s.wildlife_investigator %}
       <p class="ss-sticker__by">{{ s.wildlife_investigator }}</p>{% endif %}
-  </a>
+  {% if unlinked %}</span>{% else %}</a>{% endif %}
 </article>

@@ -9,6 +9,8 @@ Django purely to share the chrome.
 
 from django.views.generic import TemplateView
 
+from stickers.models import Sticker
+
 
 class Page(TemplateView):
     """A marketing page. `nav` highlights the matching navbar entry."""
@@ -24,6 +26,21 @@ class Page(TemplateView):
 class Index(Page):
     template_name = 'pages/index.html'
     nav = 'index'
+
+    def get_context_data(self, **kwargs):
+        """
+        The "what you can see" carousel is fed from the gallery rather
+        than a fixed list of files. There was only ever one piece of real
+        footage in assets/ (the jellyfish) — everything else in the old
+        carousel shows the device being used, not what it saw. Drawing
+        from published stickers means the section is about the right
+        thing, and it fills itself as people send more in.
+        """
+        context = super().get_context_data(**kwargs)
+        context['sightings'] = (Sticker.objects
+                                .filter(status=Sticker.Status.PUBLISHED)
+                                .select_related('species')[:8])
+        return context
 
 
 class Contacts(Page):

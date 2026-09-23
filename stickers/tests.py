@@ -679,7 +679,7 @@ class FramingTests(TestCase):
         body = self.client.get(reverse('stickers:sheet')).content.decode()
         nav = body.split('<nav')[1].split('</nav>')[0]
         self.assertIn('id="mainNav"', nav)
-        self.assertIn('>dipstickers<', nav)
+        self.assertIn('>Dipstickers<', nav)
         self.assertIn('Assembly Guide', nav)
         # workshops.dipstick.earth is still its own site and is not linked here
         self.assertNotIn('workshops.dipstick.earth', nav)
@@ -746,7 +746,7 @@ class MergedSiteTests(TestCase):
         nav = self.client.get(reverse('pages:index')).content.decode()
         nav = nav.split('<nav')[1].split('</nav>')[0]
         for label in ('Assembly Guide', 'DIY', 'Community',
-                      'dipstickers', 'Contact us'):
+                      'Dipstickers', 'Contact us'):
             self.assertIn('>%s<' % label, nav, '%s missing from the navbar' % label)
         self.assertIn('Assembly_Guide', nav)
         self.assertIn('Open-Source_Design_page', nav)
@@ -1710,12 +1710,19 @@ class StickerSheetPageTests(TestCase):
     def test_the_page_is_public(self, _geo):
         self.assertEqual(self.client.get('/stickersheet/').status_code, 200)
 
-    def test_it_is_not_linked_from_the_site(self, _geo):
-        """Unlinked on purpose — reachable only if you know it is there."""
-        for name in ('pages:index', 'pages:contacts', 'stickers:sheet'):
+    def test_it_is_not_linked_from_the_marketing_pages(self, _geo):
+        """Still not part of the site's own navigation."""
+        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter'):
             body = self.client.get(reverse(name)).content.decode()
             self.assertNotIn('/stickersheet/', body,
                              '%s links to the playground' % name)
+        nav = self.client.get(reverse('pages:index')).content.decode()
+        nav = nav.split('</nav>')[0]
+        self.assertNotIn('/stickersheet/', nav, 'it leaked into the navbar')
+
+    def test_the_sheet_links_through_to_it(self, _geo):
+        body = self.client.get(reverse('stickers:sheet')).content.decode()
+        self.assertIn('/stickersheet/', body)
 
     def test_the_tray_holds_the_die_cut_pngs(self, _geo):
         s = self._published()
@@ -1854,6 +1861,29 @@ class StickerSheetPageTests(TestCase):
         self.assertIn('.sk-page .sk__tray { height: 100%', block)
         # guarded, because on a short window cutting the footer off is worse
         self.assertIn('min-height: 640px', css)
+
+    def test_the_sheet_sits_at_the_page_edge(self, _geo):
+        """
+        Not at the left edge of a centred column floating mid-screen. The
+        reading width lives on the heading instead.
+        """
+        import os, re
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        css = open(os.path.join(
+            base, 'stickers/static/stickers/css/sheet.css')).read()
+        rule = re.search(r'\n\.sk \{(.*?)\n\}', css, re.S).group(1)
+        self.assertIn('max-width: none', rule,
+                      'the layout is centred, so the sheet floats inward')
+        head = re.search(r'\.sk__head \{(.*?)\}', css, re.S).group(1)
+        self.assertIn('max-width', head, 'the copy would stretch full width')
+
+    def test_there_is_no_horizontal_rule(self, _geo):
+        import os, re
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        css = open(os.path.join(
+            base, 'stickers/static/stickers/css/sheet.css')).read()
+        bar = re.search(r'\.sk__bar \{(.*?)\n\}', css, re.S).group(1)
+        self.assertNotIn('border-top', bar)
 
     def test_placing_is_possible_without_dragging(self, _geo):
         self._published()
@@ -2044,3 +2074,511 @@ class ScaleGestureTests(TestCase):
             body = self.client.get('/stickersheet/').content.decode()
         self.assertIn('<kbd>shift</kbd>+scroll resize', body)
         self.assertNotIn('<kbd>s</kbd>+scroll', body)
+
+
+class StaticReferenceTests(TestCase):
+    """
+    Every asset a page asks for has to exist. When the static pages became
+    templates, a converter rewrote relative `assets/...` paths into
+    {% static %} — but the kickstarter page used an ABSOLUTE `/assets/...`,
+    which it did not match, and that image 404'd silently on the live site.
+    """
+
+    def test_no_page_references_the_old_assets_root(self):
+        """
+        The converter rewrote `src=` and `href=`. It missed an ABSOLUTE
+        `/assets/...` on the kickstarter page and two `poster=` attributes on
+        the home page — all of which 404'd silently on the live site.
+        """
+        import re
+        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter',
+                     'stickers:sheet'):
+            body = self.client.get(reverse(name)).content.decode()
+            stale = re.findall(r'(?:src|href|poster|content)="(/?(?:\.\./)?assets/[^"]*)"',
+                               body)
+            self.assertEqual(stale, [],
+                             '%s still points at the pre-merge asset root: %s'
+                             % (name, stale))
+
+    def test_every_static_reference_resolves(self):
+        import os, re
+        from urllib.parse import unquote
+        from django.conf import settings
+        from django.contrib.staticfiles import finders
+
+        missing = []
+        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter',
+                     'stickers:sheet', 'stickers:submit'):
+            body = self.client.get(reverse(name)).content.decode()
+            for ref in set(re.findall(r'(?:src|href|poster)="(/static/[^"]+)"', body)):
+                rel = unquote(ref[len('/static/'):].split('?')[0])
+                if not finders.find(rel):
+                    missing.append((name, ref))
+        self.assertEqual(missing, [], 'unresolvable static references: %s' % missing)
+
+
+class TouchSupportTests(TestCase):
+    """
+    HTML5 drag-and-drop never fires on a touchscreen, so the tray was dead on
+    a phone. Peeling goes through pointer events instead, which behave the
+    same for mouse, trackpad and finger.
+    """
+
+    def _js(self):
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return open(os.path.join(
+            base, 'stickers/static/stickers/js/stickersheet.js')).read()
+
+    def _css(self):
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return open(os.path.join(
+            base, 'stickers/static/stickers/css/sheet.css')).read()
+
+    def test_peeling_does_not_depend_on_html5_drag(self):
+        js = self._js()
+        self.assertIn("peel.addEventListener('pointerdown'", js,
+                      'the tray only works with a mouse')
+
+    def test_a_pointer_peel_does_not_also_fire_the_click(self):
+        """Both would fire on a mouse and place two stickers."""
+        js = self._js()
+        self.assertIn('if (peeled) { peeled = false; return; }', js)
+
+    def test_dragging_does_not_scroll_the_page(self):
+        """
+        Without touch-action:none the browser claims the gesture as a scroll
+        before any handler sees it, and nothing can be moved on a phone.
+        """
+        import re
+        css = self._css()
+        for selector in ('.sk__stuck', '.sk__peel'):
+            rule = re.search(re.escape(selector) + r' \{(.*?)\n\}', css, re.S)
+            self.assertIsNotNone(rule, '%s missing' % selector)
+            self.assertIn('touch-action: none', rule.group(1),
+                          '%s will scroll instead of drag on touch' % selector)
+
+    def test_pinch_scales_and_rotates(self):
+        """There is no shift key and no wheel on a phone."""
+        js = self._js()
+        self.assertIn('function onPinchStart', js)
+        self.assertIn('function onPinchMove', js)
+        self.assertIn('Math.hypot', js)
+
+    def test_the_touch_hint_replaces_the_key_legend(self):
+        with mock.patch('stickers.models.geocode', return_value=None):
+            body = self.client.get('/stickersheet/').content.decode()
+        self.assertIn('pinch to', body)
+        css = self._css()
+        i = css.index('.sk__keys { display: none; }')
+        self.assertGreater(i, 0, 'the key legend still shows on touch')
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+@mock.patch('stickers.models.geocode', return_value=None)
+class HomePageSectionsTests(TestCase):
+    """
+    The home page: hero, an explainer sticker, then two carousels — how the
+    thing works, and what it sees.
+    """
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def _published(self, name='Anemone'):
+        species = Species.objects.create(common_name=name)
+        return Sticker.objects.create(species=species, media=a_varied_photo(),
+                                      status=Sticker.Status.PUBLISHED)
+
+    def test_the_explainer_sticker_says_what_a_dipstick_is(self, _geo):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('ds-explainer', body)
+        self.assertIn('tentacle on', body)
+        self.assertIn('share what', body)
+
+    def test_both_sections_are_there(self, _geo):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('How the dipstick works', body)
+        self.assertIn('What you can see with a dipstick', body)
+        self.assertIn('ds-rule', body)
+
+    def test_sightings_show_as_stickers_not_a_carousel(self, _geo):
+        """
+        They ARE stickers, so a sheet of them beats one-at-a-time — and it
+        reuses the gallery's own card, so the two cannot drift apart.
+        """
+        self._published('Purple shore crab')
+        body = self.client.get(reverse('pages:index')).content.decode()
+        see = body.split('What you can see with a dipstick')[1]
+        self.assertIn('ss-sheet--home', see)
+        self.assertIn('ss-sticker__clip', see)
+        self.assertNotIn('carousel slide', see)
+
+    def test_the_sightings_sit_on_the_keeper(self, _geo):
+        self._published('Purple shore crab')
+        body = self.client.get(reverse('pages:index')).content.decode()
+        see = body.split('What you can see with a dipstick')[1]
+        self.assertIn('ds-keeper', see)
+        self.assertIn('ds-keeper__stuck', see)
+        self.assertIn('--tilt:', see)
+
+    def test_keeper_stickers_are_decoration_not_links(self, _geo):
+        """
+        On the keeper a sticker is something stuck to a folder, not a way
+        through to anything. The species name becomes a tooltip instead.
+        """
+        import re
+        self._published('Purple shore crab')
+        body = self.client.get(reverse('pages:index')).content.decode()
+        keeper = body.split('class="ds-keeper"')[1].split('ds-keeper__fallback')[0]
+        self.assertEqual(keeper.count('ss-sticker__link" href'), 0,
+                         'keeper stickers are still links')
+        self.assertIn('title="Purple shore crab"', keeper)
+
+    def test_the_gallery_cards_are_still_links(self, _geo):
+        """
+        The flag is negative so an include that omits it keeps its link —
+        nothing changes behaviour by saying nothing.
+        """
+        self._published()
+        for page in (reverse('stickers:sheet'), reverse('pages:index')):
+            body = self.client.get(page).content.decode()
+            self.assertIn('ss-sticker__link" href', body, page)
+
+    def test_the_scatter_is_stable_across_renders(self, _geo):
+        """
+        Placements are fixed, not random. A random layout re-rolls on every
+        render, so a sticker would jump between page loads — and could land
+        on the wordmark or half off the edge.
+        """
+        for name in ('Anemone', 'Blenny', 'Sea star'):
+            self._published(name)      # distinct: species slugs are unique
+        first = self.client.get(reverse('pages:index')).content.decode()
+        second = self.client.get(reverse('pages:index')).content.decode()
+        import re
+        a = re.findall(r'ds-keeper__stuck" style="([^"]*)"', first)
+        b = re.findall(r'ds-keeper__stuck" style="([^"]*)"', second)
+        self.assertEqual(a, b)
+        self.assertEqual(len(a), 3)
+        self.assertNotEqual(a[0], a[1], 'every sticker landed in the same place')
+
+    def test_narrow_screens_fall_back_to_the_sheet(self, _geo):
+        """Scattered onto a small panel they would pile up on each other."""
+        self._published()
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('ds-keeper__fallback', body)
+
+    def test_the_fallback_beats_the_sheet_rule_it_competes_with(self, _geo):
+        """
+        sheet.css loads after style-sticker.css and sets .ss-sheet{display:grid}
+        at the same specificity. An unqualified .ds-keeper__fallback lost on
+        source order, so the grid showed under the keeper and every sticker
+        appeared twice.
+        """
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        css = open(os.path.join(
+            base, 'pages/static/assets/css/style-sticker.css')).read()
+        self.assertIn('.ds-keeper__fallback.ss-sheet { display: none; }', css)
+
+    def test_every_slot_stays_on_the_keeper(self, _geo):
+        """
+        Below the fold (the flap ends 26.9% down) and inside all four edges —
+        a sticker hanging off looks like a mistake, not a scatter.
+        """
+        from stickers.templatetags.stickerfx import SCATTER
+        for left, top, width, rot in SCATTER:
+            self.assertGreaterEqual(top, 30, 'slot sits on the flap')
+            self.assertLessEqual(left + width, 100, 'slot runs off the right')
+            self.assertLessEqual(top + width * 1.16, 100, 'slot runs off the bottom')
+
+    def test_the_home_page_loads_what_those_cards_need(self, _geo):
+        """
+        This page extends the site base, not the gallery one, so the card's
+        stylesheet and its video handling have to be asked for explicitly —
+        without them the stickers render unstyled and never move.
+        """
+        self._published()
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('stickers/css/sheet', body)
+        self.assertIn('stickers/js/sheet', body)
+
+    def test_the_remaining_carousel_has_its_own_id(self, _geo):
+        """Bootstrap wires carousel controls by id."""
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('id="carousel-how"', body)
+        self.assertNotIn('id="carousel-1"', body)
+
+    def test_the_three_stickers_lead_the_how_it_works_section(self, _geo):
+        """
+        They explain the thing, so they belong with the section that does,
+        below its carousel rather than in a section of their own.
+        """
+        body = self.client.get(reverse('pages:index')).content.decode()
+        how = body.split('How the dipstick works')[1].split('</section>')[0]
+        self.assertIn('ds-stickers', how)
+        for art in ('explore', 'get-close', 'byop'):
+            self.assertIn(art, how, '%s is not in that section' % art)
+        self.assertGreater(how.index('ds-stickers'), how.index('ds-carousel'),
+                           'the stickers come before the carousel')
+
+    def test_the_oshw_mark_is_in_the_diy_section(self, _geo):
+        """
+        It belongs with the open-source-hardware claim it certifies, and it
+        links out so the certification can actually be checked.
+        """
+        body = self.client.get(reverse('pages:index')).content.decode()
+        diy = body.split('Make your own dipstick')[1].split('</section>')[0]
+        self.assertIn('oshw-logo', diy)
+        self.assertIn('oshwa.org', diy)
+        self.assertIn('alt="Open source hardware"', diy)
+
+    def test_the_byop_sticker_copy(self, _geo):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('Bring your own phone for the viewfinder.', body)
+        self.assertNotIn('No extra screen to carry', body)
+
+    def test_the_stickers_are_not_duplicated(self, _geo):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertEqual(body.count('ds-stickers'), 1)
+
+    def test_the_sightings_come_from_the_gallery(self, _geo):
+        s = self._published('Purple shore crab')
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('Purple shore crab', body)
+        # the card serves derivatives, not the original upload
+        self.assertIn(s.thumb_url, body)
+        self.assertIn(s.get_absolute_url(), body)
+
+    def test_only_published_stickers_appear(self, _geo):
+        self._published('Live thing')
+        species = Species.objects.create(common_name='Waiting thing')
+        Sticker.objects.create(species=species, media=a_varied_photo(),
+                               status=Sticker.Status.PENDING)
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('Live thing', body)
+        self.assertNotIn('Waiting thing', body)
+
+    def test_an_empty_gallery_does_not_leave_an_empty_carousel(self, _geo):
+        """It falls back to the jellyfish clip rather than showing nothing."""
+        self.assertEqual(Sticker.objects.count(), 0)
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('jellyfish', body)
+        self.assertIn('carousel-item active', body)
+
+    def test_the_cross_section_leads_the_how_it_works_carousel(self, _geo):
+        """It is the slide that actually explains how the thing works."""
+        body = self.client.get(reverse('pages:index')).content.decode()
+        how = body.split('id="carousel-how"')[1].split('</section>')[0]
+        first = how.split('carousel-item')[1]
+        self.assertIn('how-it-works', first, 'the cross-section is not first')
+        self.assertIn('active', first)
+
+    def test_the_indicators_match_the_slide_count(self, _geo):
+        """
+        Bootstrap wires indicators by index; adding a slide without
+        renumbering leaves the last one pointing at nothing.
+        """
+        body = self.client.get(reverse('pages:index')).content.decode()
+        how = body.split('id="carousel-how"')[1].split('</section>')[0]
+        slides = how.count('class="carousel-item')
+        dots = how.count('data-bs-slide-to=')
+        self.assertEqual(slides, dots, '%d slides but %d indicators' % (slides, dots))
+        import re
+        targets = sorted(int(n) for n in re.findall(r'data-bs-slide-to="(\d+)"', how))
+        self.assertEqual(targets, list(range(slides)), 'indicator indexes have a gap')
+
+    def test_the_explore_sticker_copy(self, _geo):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('tidepools, creeks, and mysterious holes', body)
+        self.assertNotIn('tidepools, tanks,', body)
+
+    def test_the_section_links_on_to_the_sheet(self, _geo):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn(reverse('stickers:sheet'), body)
+
+
+class CarouselAutoplayTests(TestCase):
+    """
+    The home page gained a second carousel, and the autoplay script targeted
+    a single hard-coded id — so after the split neither one played and every
+    clip sat on its poster.
+    """
+
+    def _js(self):
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return open(os.path.join(
+            base, 'pages/static/assets/js/carousel-autoplay.js')).read()
+
+    def test_it_drives_every_carousel_not_one_id(self):
+        js = self._js()
+        self.assertIn("querySelectorAll('.carousel.slide')", js)
+        self.assertNotIn("querySelector('#carousel-1')", js)
+
+    def test_the_home_page_carousel_is_reachable_by_that_selector(self):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertGreaterEqual(body.count('class="carousel slide"'), 1,
+                                'the script selects on this exact class list')
+
+
+class PlaygroundPlaybackTests(TestCase):
+    """A video has to be in the document before it will start."""
+
+    def _js(self):
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return open(os.path.join(
+            base, 'stickers/static/stickers/js/stickersheet.js')).read()
+
+    def test_play_is_called_after_insertion(self):
+        js = self._js()
+        appended = js.index('canvas.appendChild(el)')
+        played = js.index('video.play()')
+        self.assertGreater(played, appended,
+                           'play() runs before the video is in the DOM')
+
+    def test_a_refused_autoplay_is_survivable(self):
+        """Battery saver and reduced-data modes refuse it; the poster stands in."""
+        self.assertIn('playing.catch', self._js())
+
+
+class NavbarOffsetTests(TestCase):
+    """
+    The fixed navbar needs the page pushed down, but the marketing pages do
+    that with their hero's own padding. sheet.css is loaded by the home page
+    now (for the sticker cards), so its offset must not apply there too —
+    unscoped, the two stacked and left a chasm under the navbar.
+    """
+
+    def _css(self):
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return open(os.path.join(
+            base, 'stickers/static/stickers/css/sheet.css')).read()
+
+    def test_the_offset_is_scoped_not_on_bare_body(self):
+        css = self._css()
+        self.assertNotIn('\nbody { padding-top', css,
+                         'the offset applies to every page loading this file')
+        self.assertIn('.ss-page { padding-top', css)
+
+    def test_gallery_pages_carry_the_class(self):
+        with mock.patch('stickers.models.geocode', return_value=None):
+            for name in ('stickers:sheet', 'stickers:submit'):
+                body = self.client.get(reverse(name)).content.decode()
+                self.assertIn('class="ss-page"', body, name)
+
+    def test_the_playground_keeps_both_classes(self):
+        with mock.patch('stickers.models.geocode', return_value=None):
+            body = self.client.get('/stickersheet/').content.decode()
+        self.assertIn('ss-page', body)
+        self.assertIn('sk-page', body)
+
+    def test_the_home_page_does_not_get_the_offset(self):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertNotIn('class="ss-page"', body)
+
+
+class ContactsLinkTests(TestCase):
+    """
+    The DIY button on /contacts/ pointed at `index.html#diy`, a leftover
+    relative path from the static site. From /contacts/ that resolves to
+    /contacts/index.html — a 404 — so the button went nowhere.
+    """
+
+    def test_no_relative_html_links_survive(self):
+        import re
+        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter'):
+            body = self.client.get(reverse(name)).content.decode()
+            stale = re.findall(r'href="[a-z0-9_-]+\.html[^"]*"', body)
+            self.assertEqual(stale, [],
+                             '%s has pre-merge relative links: %s' % (name, stale))
+
+    def test_the_diy_button_goes_to_the_wiki_in_a_new_tab(self):
+        body = self.client.get(reverse('pages:contacts')).content.decode()
+        self.assertIn('Make your own', body)
+        self.assertNotIn('Get the files', body)
+        anchor = [a for a in body.split('<a ') if 'Make your own' in a][0]
+        self.assertIn('wiki.dipstick.earth/index.php/Assembly_Guide', anchor)
+        self.assertIn('target="_blank"', anchor)
+        self.assertIn('noopener', anchor)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+@mock.patch('stickers.models.geocode', return_value=None)
+class VideoWeightTests(TestCase):
+    """
+    Phone footage is far too big to hand to a visitor as-is: one clip on the
+    home page was 12 MB, and the four together came to 21 MB on scroll.
+    Cards play a web-sized re-encode instead.
+    """
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_a_photo_is_served_as_itself(self, _geo):
+        species = Species.objects.create(common_name='Anemone')
+        s = Sticker.objects.create(species=species, media=a_varied_photo(),
+                                   status=Sticker.Status.PUBLISHED)
+        self.assertEqual(s.playable_url, s.media.url)
+
+    def test_cards_ask_for_the_playable_url(self, _geo):
+        """Not the original upload."""
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        card = open(os.path.join(
+            base, 'stickers/templates/stickers/_sticker_card.html')).read()
+        self.assertIn('data-src="{{ s.playable_url }}"', card)
+        self.assertNotIn('data-src="{{ s.media.url }}"', card)
+
+    def test_the_detail_page_still_serves_the_original(self, _geo):
+        """Someone who opened one sticker has chosen to look closely."""
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        detail = open(os.path.join(
+            base, 'stickers/templates/stickers/detail.html')).read()
+        self.assertIn('{{ sticker.media.url }}', detail)
+
+    def test_compression_refuses_to_make_things_bigger(self, _geo):
+        """A re-encode larger than the original helps nobody."""
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        src = open(os.path.join(base, 'stickers/imaging.py')).read()
+        self.assertIn('>= os.path.getsize(source_path)', src)
+
+    def test_audio_is_stripped(self, _geo):
+        """Every place this clip is used is muted."""
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        src = open(os.path.join(base, 'stickers/imaging.py')).read()
+        self.assertIn("'-an'", src)
+        self.assertIn('+faststart', src)
+
+
+class PageWeightTests(TestCase):
+    """Things that quietly cost a visitor a lot for very little."""
+
+    def test_the_favicon_is_not_absurd(self):
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        size = os.path.getsize(os.path.join(
+            base, 'stickers/static/stickers/favicon.ico'))
+        self.assertLess(size, 30 * 1024,
+                        'favicon is %.0f KB; 128 and 256 sizes are dead weight'
+                        % (size / 1024))
+
+    def test_carousel_slides_after_the_first_are_deferred(self):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        how = body.split('id="carousel-how"')[1].split('</section>')[0]
+        items = how.split('carousel-item')[1:]
+        for item in items[1:]:
+            img = item.split('>')[0]
+            if '<img' in item.split('</div')[0]:
+                self.assertIn('loading="lazy"', item.split('</div')[0],
+                              'an off-screen slide loads with the page')

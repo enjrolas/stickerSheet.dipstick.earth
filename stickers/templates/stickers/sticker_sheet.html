@@ -4,7 +4,7 @@
 {% block title %}Sticker Sheet — dipstickers{% endblock %}
 {% block description %}Peel an animal off the sticker sheet and stick it down. Make em big or small, spin em around.{% endblock %}
 
-{% block body_class %}sk-page{% endblock %}
+{% block body_class %}ss-page sk-page{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -41,7 +41,7 @@ them into a box.
               data-ring="{{ s.shape_ring_url }}"
               data-mask="{{ s.shape_mask_url }}"
               {% if s.is_animated %}
-              data-media="{{ s.media.url }}"
+              data-media="{{ s.playable_url }}"
               data-poster="{{ s.poster_url }}"
               {% with c=s.live_crop %}{% if c %}data-crop="{{ c.0|floatformat:3 }},{{ c.1|floatformat:3 }},{{ c.2|floatformat:3 }},{{ c.3|floatformat:3 }}"{% endif %}{% endwith %}
               {% else %}
@@ -65,6 +65,8 @@ them into a box.
       <span><kbd>shift</kbd>+scroll resize</span>
       <span><kbd>del</kbd> remove</span>
     </div>
+    <p class="sk__touch-keys">Tap a sticker to peel it. Drag to move, pinch to
+      size and spin.</p>
     <button class="ss-btn" type="button" data-music aria-pressed="false">
       animal disco
     </button>
