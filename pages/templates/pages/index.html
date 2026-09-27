@@ -16,7 +16,8 @@
                     </h1>
                     <p class="ds-hero__tag ds-anim ds-anim--2">Tentacle cameras for exploring the underwater world.</p>
                     <div class="ds-hero__actions ds-anim ds-anim--3">
-                        <a class="ds-btn" href="/kickstarter/">Support us on Kickstarter</a>
+                        <a class="ds-btn" href="https://www.kickstarter.com/projects/ex-invention/the-dipstick"
+                           target="_blank" rel="noopener noreferrer">Support us on Kickstarter</a>
                         <a class="ds-btn ds-btn--paper" href="#diy">Build your own</a>
                         <a class="ds-btn ds-btn--paper" href="https://discord.gg/EEsUhCmjTG">Join the Discord</a>
                     </div>
@@ -163,9 +164,9 @@
                         — the mark means something, and the certification is
                         worth being able to check.
                         {% endcomment %}
-                        <a class="ds-oshw__mark" href="https://www.oshwa.org/"
+                        <a class="ds-oshw__mark" href="https://certification.oshwa.org/us002860.html"
                            target="_blank" rel="noopener noreferrer"
-                           title="Open Source Hardware Association">
+                           title="OSHWA certification US002860">
                             <img src="{% static 'assets/img/oshw-logo.svg' %}"
                                  alt="Open source hardware" width="64" height="67">
                         </a>
@@ -200,6 +201,7 @@
                 <div>
                     <h2 class="ds-display">Interested in contributing?</h2>
                     <p>Email hello (at) dipstick.earth, or <a href="https://discord.gg/EEsUhCmjTG">join our Discord</a>.</p>
+                    {% include 'pages/_social.html' %}
                 </div>
                 <a class="ds-btn ds-btn--paper" role="button" href="{% url 'pages:contacts' %}">Contact us</a>
             </div>

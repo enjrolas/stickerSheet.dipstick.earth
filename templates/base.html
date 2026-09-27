@@ -26,6 +26,22 @@ same Bootstrap and the same font.
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="{% static 'assets/css/style-sticker.css' %}">
 {% block extra_css %}{% endblock %}
+{% if google_analytics_id %}
+{% comment %}
+Google Analytics. Rendered only for real visitors: the context processor
+withholds the ID when DEBUG is on and when the viewer is staff, so local work
+and your own visits stay out of the numbers.
+
+Loaded last in the head and async, so it never delays first paint.
+{% endcomment %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ google_analytics_id }}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '{{ google_analytics_id }}');
+</script>
+{% endif %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
 

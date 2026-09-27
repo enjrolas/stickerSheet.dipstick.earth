@@ -696,3 +696,39 @@ a { text-underline-offset: .18em; text-decoration-thickness: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ds-keeper__stuck, .ds-keeper__stuck:hover { transition: none; }
 }
+
+/* Instagram link ----------------------------------------------------------
+   Sits on the paper like the rest of the site — no card, a hard offset
+   shadow, and the playful tilt the brand mark uses. The glyph inherits
+   currentColor so it reads on any of the section grounds. */
+.ds-social {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: .6rem;
+  padding: 7px 15px 7px 11px;
+  border: var(--rule);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink) !important;
+  text-decoration: none !important;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: .95rem;
+  box-shadow: var(--pop-sm);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.ds-social:hover {
+  transform: translate(-2px, -2px) rotate(-2deg);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+.ds-social:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.ds-social:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.ds-social__glyph { display: block; flex: 0 0 auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-social, .ds-social:hover { transition: none; transform: none; }
+}

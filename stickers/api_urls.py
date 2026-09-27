@@ -10,4 +10,9 @@ router.register('shapes', api.ShapeViewSet, basename='shape')
 router.register('submit', api.SubmitViewSet, basename='submit')
 
 app_name = 'api'
-urlpatterns = [path('', include(router.urls))]
+
+urlpatterns = [
+    path('auth/token/', api.TokenView.as_view(), name='token'),
+    path('auth/token/revoke/', api.RevokeTokenView.as_view(), name='token-revoke'),
+    path('', include(router.urls)),
+]

@@ -1,0 +1,22 @@
+{% comment %}
+The Instagram link, shared by the three marketing pages so the handle lives in
+one place. Deliberately not in the shared footer: that would put it on the
+gallery and the playground too, which were not asked for.
+
+The glyph is inline SVG rather than an icon font — the site loads no icon
+library, and pulling one in for a single mark would cost more than the page
+it sits on. currentColor means it inherits the surrounding text colour, so it
+works on cream and on the ink ground alike.
+{% endcomment %}
+<a class="ds-social" href="https://www.instagram.com/the.dipstick/"
+   target="_blank" rel="noopener noreferrer me">
+  <svg class="ds-social__glyph" viewBox="0 0 24 24" width="24" height="24"
+       aria-hidden="true" focusable="false"
+       fill="none" stroke="currentColor" stroke-width="2"
+       stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="2" width="20" height="20" rx="5.5"/>
+    <circle cx="12" cy="12" r="4.2"/>
+    <circle cx="17.6" cy="6.4" r="1.2" fill="currentColor" stroke="none"/>
+  </svg>
+  <span class="ds-social__handle">@the.dipstick</span>
+</a>

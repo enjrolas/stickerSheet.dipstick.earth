@@ -770,7 +770,9 @@ class MergedSiteTests(TestCase):
         self.assertIn('href="%s"' % reverse('pages:index'), nav)
 
     def test_marketing_pages_render(self):
-        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter'):
+        # pages:kickstarter redirects to the live campaign; see
+        # KickstarterLinkTests.
+        for name in ('pages:index', 'pages:contacts'):
             r = self.client.get(reverse(name))
             self.assertEqual(r.status_code, 200, name)
             self.assertContains(r, 'id="mainNav"')
@@ -1473,8 +1475,7 @@ class AssetLoadingTests(TestCase):
     """
 
     def test_bootstrap_is_loaded_once_per_page(self):
-        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter',
-                     'stickers:sheet'):
+        for name in ('pages:index', 'pages:contacts', 'stickers:sheet'):
             body = self.client.get(reverse(name)).content.decode()
             self.assertEqual(body.count('bootstrap.min'), 2,
                              '%s: expected one CSS + one JS bootstrap tag' % name)
@@ -1712,7 +1713,7 @@ class StickerSheetPageTests(TestCase):
 
     def test_it_is_not_linked_from_the_marketing_pages(self, _geo):
         """Still not part of the site's own navigation."""
-        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter'):
+        for name in ('pages:index', 'pages:contacts'):
             body = self.client.get(reverse(name)).content.decode()
             self.assertNotIn('/stickersheet/', body,
                              '%s links to the playground' % name)
@@ -2091,8 +2092,7 @@ class StaticReferenceTests(TestCase):
         the home page — all of which 404'd silently on the live site.
         """
         import re
-        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter',
-                     'stickers:sheet'):
+        for name in ('pages:index', 'pages:contacts', 'stickers:sheet'):
             body = self.client.get(reverse(name)).content.decode()
             stale = re.findall(r'(?:src|href|poster|content)="(/?(?:\.\./)?assets/[^"]*)"',
                                body)
@@ -2107,7 +2107,7 @@ class StaticReferenceTests(TestCase):
         from django.contrib.staticfiles import finders
 
         missing = []
-        for name in ('pages:index', 'pages:contacts', 'pages:kickstarter',
+        for name in ('pages:index', 'pages:contacts',
                      'stickers:sheet', 'stickers:submit'):
             body = self.client.get(reverse(name)).content.decode()
             for ref in set(re.findall(r'(?:src|href|poster)="(/static/[^"]+)"', body)):
@@ -2333,7 +2333,8 @@ class HomePageSectionsTests(TestCase):
         body = self.client.get(reverse('pages:index')).content.decode()
         diy = body.split('Make your own dipstick')[1].split('</section>')[0]
         self.assertIn('oshw-logo', diy)
-        self.assertIn('oshwa.org', diy)
+        # the certification record itself, not the association's home page
+        self.assertIn('certification.oshwa.org/us002860.html', diy)
         self.assertIn('alt="Open source hardware"', diy)
 
     def test_the_byop_sticker_copy(self, _geo):
@@ -2582,3 +2583,281 @@ class PageWeightTests(TestCase):
             if '<img' in item.split('</div')[0]:
                 self.assertIn('loading="lazy"', item.split('</div')[0],
                               'an off-screen slide loads with the page')
+
+
+class SocialLinkTests(TestCase):
+    """
+    The Instagram link, on the three marketing pages only — not in the shared
+    footer, which would also put it on the gallery and the playground.
+    """
+
+    HANDLE = 'https://www.instagram.com/the.dipstick/'
+
+    def test_it_is_on_the_marketing_pages(self):
+        # pages:kickstarter redirects off-site now, so it renders nothing
+        for name in ('pages:index', 'pages:contacts'):
+            body = self.client.get(reverse(name)).content.decode()
+            self.assertIn(self.HANDLE, body, '%s has no Instagram link' % name)
+
+    def test_it_opens_in_a_new_tab_safely(self):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        anchor = [a for a in body.split('<a ') if self.HANDLE in a][0]
+        self.assertIn('target="_blank"', anchor)
+        self.assertIn('noopener', anchor,
+                      'the opened page could reach back via window.opener')
+
+    def test_it_is_not_on_the_gallery_or_the_playground(self):
+        with mock.patch('stickers.models.geocode', return_value=None):
+            for page in (reverse('stickers:sheet'), '/stickersheet/'):
+                body = self.client.get(page).content.decode()
+                self.assertNotIn(self.HANDLE, body, page)
+
+    def test_the_handle_lives_in_one_place(self):
+        """Three pages, one partial — a handle change should be one edit."""
+        import glob, os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        hits = [p for p in glob.glob(base + '/pages/templates/**/*.html',
+                                     recursive=True)
+                if 'instagram.com' in open(p).read()]
+        self.assertEqual([os.path.basename(p) for p in hits], ['_social.html'])
+
+    def test_the_glyph_needs_no_icon_library(self):
+        """A whole icon font for one mark would outweigh the page."""
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn('ds-social__glyph', body)
+        self.assertIn('<svg', body.split('ds-social')[1])
+        for lib in ('font-awesome', 'fontawesome', 'bootstrap-icons'):
+            self.assertNotIn(lib, body.lower())
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+@mock.patch('stickers.models.geocode', return_value=None)
+class AppTokenTests(TestCase):
+    """
+    A phone app authenticates with a token instead of a session cookie. The
+    rule about who skips the review queue is the SAME rule the website uses —
+    staff skip it, everyone else waits — so there is one answer rather than
+    two that can drift.
+    """
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.staff = User.objects.create_user('phone-staff', 'p@x.com', 'pw',
+                                              is_staff=True)
+        self.plain = User.objects.create_user('phone-plain', 'q@x.com', 'pw')
+
+    def _token(self, username, password='pw'):
+        r = self.client.post(reverse('api:token'),
+                             {'username': username, 'password': password})
+        return r
+
+    def _submit(self, token=None, **extra):
+        data = {'species_name': 'Anemone', 'media': a_photo()}
+        data.update(extra)
+        kw = {'HTTP_AUTHORIZATION': 'Token ' + token} if token else {}
+        return self.client.post('/api/submit/', data, **kw)
+
+    # --- getting a token ------------------------------------------------
+    def test_a_phone_can_exchange_a_password_for_a_token(self, _geo):
+        r = self._token('phone-staff')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('token', r.json())
+        self.assertTrue(r.json()['publishes_immediately'])
+
+    def test_the_response_says_whether_review_is_skipped(self, _geo):
+        """So the app can tell the truth about what happens next."""
+        self.assertFalse(self._token('phone-plain').json()['publishes_immediately'])
+
+    def test_a_wrong_password_gets_nothing(self, _geo):
+        r = self._token('phone-staff', 'wrong')
+        self.assertEqual(r.status_code, 400)
+        self.assertNotIn('token', r.json())
+
+    def test_asking_twice_returns_the_same_token(self, _geo):
+        """An app that lost its token re-asks; it should not pile up credentials."""
+        from rest_framework.authtoken.models import Token
+        a = self._token('phone-staff').json()['token']
+        b = self._token('phone-staff').json()['token']
+        self.assertEqual(a, b)
+        self.assertEqual(Token.objects.filter(user=self.staff).count(), 1)
+
+    def test_a_token_can_be_revoked(self, _geo):
+        token = self._token('phone-staff').json()['token']
+        r = self.client.post(reverse('api:token-revoke'),
+                             HTTP_AUTHORIZATION='Token ' + token)
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(self._submit(token=token).status_code, 401)
+
+    # --- what the token buys --------------------------------------------
+    def test_no_token_still_posts_but_waits(self, _geo):
+        r = self._submit()
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json()['status'], Sticker.Status.PENDING)
+
+    def test_a_staff_token_publishes_immediately(self, _geo):
+        token = self._token('phone-staff').json()['token']
+        r = self._submit(token=token)
+        self.assertEqual(r.json()['status'], Sticker.Status.PUBLISHED)
+        self.assertEqual(Sticker.objects.get().status, Sticker.Status.PUBLISHED)
+
+    def test_a_non_staff_token_still_waits(self, _geo):
+        """Authenticated is not the same as trusted to publish."""
+        token = self._token('phone-plain').json()['token']
+        self.assertEqual(self._submit(token=token).json()['status'],
+                         Sticker.Status.PENDING)
+
+    def test_a_made_up_token_is_rejected_outright(self, _geo):
+        r = self._submit(token='0' * 40)
+        self.assertEqual(r.status_code, 401)
+        self.assertFalse(Sticker.objects.exists())
+
+    def test_the_body_cannot_ask_to_be_published(self, _geo):
+        """Whoever sent it. The serializer has no `status` field at all."""
+        r = self._submit(status='published', is_staff='true')
+        self.assertEqual(r.json()['status'], Sticker.Status.PENDING)
+
+    # --- framing from the phone -----------------------------------------
+    def test_an_app_can_send_the_crop_it_chose(self, _geo):
+        token = self._token('phone-staff').json()['token']
+        self._submit(token=token, shape='06-splat', focal_x='0.3',
+                     focal_y='0.7', zoom='2.0')
+        s = Sticker.objects.get()
+        self.assertEqual(s.shape, '06-splat')
+        self.assertAlmostEqual(s.focal_x, 0.3)
+        self.assertAlmostEqual(s.zoom, 2.0)
+
+    def test_a_bogus_shape_is_refused(self, _geo):
+        r = self._submit(shape='../../etc/passwd')
+        self.assertEqual(r.status_code, 400)
+        self.assertFalse(Sticker.objects.exists())
+
+    def test_silly_framing_is_clamped_not_rejected(self, _geo):
+        self._submit(focal_x='9', focal_y='-3', zoom='900')
+        s = Sticker.objects.get()
+        self.assertEqual((s.focal_x, s.focal_y), (1.0, 0.0))
+        self.assertEqual(s.zoom, 4.0)
+
+    # --- throttling ------------------------------------------------------
+    def test_strangers_are_throttled_but_known_users_are_not(self, _geo):
+        from stickers.api import SubmitViewSet
+        from rest_framework.test import APIRequestFactory
+        from django.contrib.auth.models import AnonymousUser
+
+        factory = APIRequestFactory()
+        view = SubmitViewSet()
+
+        request = factory.post('/api/submit/')
+        request.user = AnonymousUser()
+        view.request = request
+        self.assertTrue(view.get_throttles(), 'anonymous posts are unlimited')
+
+        request.user = self.plain
+        view.request = request
+        self.assertEqual(view.get_throttles(), [],
+                         'a field trip would hit a wall at twelve uploads')
+
+
+class VhostAuthHeaderTests(TestCase):
+    """
+    mod_wsgi drops the Authorization header unless told not to. Without the
+    directive the app API still returns 201 — it just treats every request as
+    anonymous, so staff tokens quietly stop skipping the review queue. There
+    is no error to notice, which is exactly why this is worth a test.
+    """
+
+    def test_the_vhost_passes_the_authorization_header(self):
+        import os
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        conf = open(os.path.join(
+            base, 'deploy/dipstick.earth-le-ssl.conf')).read()
+        self.assertIn('WSGIPassAuthorization On', conf,
+                      'token auth will silently fall back to anonymous')
+
+
+@override_settings(DEBUG=False, GOOGLE_ANALYTICS_ID='G-TESTID0000')
+class AnalyticsTests(TestCase):
+    """
+    The tag goes on every page of the site, but not for everyone.
+    """
+
+    TAG = 'googletagmanager.com/gtag/js'
+
+    def test_it_is_on_every_page(self):
+        with mock.patch('stickers.models.geocode', return_value=None):
+            # not pages:kickstarter — it redirects to the campaign
+            for page in (reverse('pages:index'), reverse('pages:contacts'),
+                         reverse('stickers:sheet'),
+                         reverse('stickers:submit'), '/stickersheet/'):
+                body = self.client.get(page).content.decode()
+                self.assertIn(self.TAG, body, page)
+                self.assertIn('G-TESTID0000', body, page)
+
+    def test_staff_are_not_counted(self):
+        """
+        Your own visits are the biggest source of junk in a small site's
+        numbers, and you visit far more than anyone else.
+        """
+        from django.contrib.auth.models import User
+        User.objects.create_superuser('analytics-staff', 'a@x.com', 'pw')
+        self.client.force_login(User.objects.get(username='analytics-staff'))
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertNotIn(self.TAG, body)
+
+    def test_an_ordinary_logged_in_visitor_is_counted(self):
+        from django.contrib.auth.models import User
+        User.objects.create_user('analytics-plain', 'b@x.com', 'pw')
+        self.client.force_login(User.objects.get(username='analytics-plain'))
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn(self.TAG, body)
+
+    @override_settings(DEBUG=True)
+    def test_local_work_is_not_counted(self):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertNotIn(self.TAG, body)
+
+    @override_settings(GOOGLE_ANALYTICS_ID='')
+    def test_an_empty_id_renders_no_tag_at_all(self):
+        """Not an empty gtag call with a blank ID."""
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertNotIn(self.TAG, body)
+        self.assertNotIn('gtag(', body)
+
+    def test_it_does_not_block_first_paint(self):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        tag = [line for line in body.splitlines() if self.TAG in line][0]
+        self.assertIn('async', tag)
+
+
+class KickstarterLinkTests(TestCase):
+    """The hero button goes to the campaign itself, off-site."""
+
+    URL = 'https://www.kickstarter.com/projects/ex-invention/the-dipstick'
+
+    def test_the_hero_button_leaves_for_kickstarter(self):
+        body = self.client.get(reverse('pages:index')).content.decode()
+        self.assertIn(self.URL, body)
+        anchor = [a for a in body.split('<a ') if self.URL in a][0]
+        self.assertIn('target="_blank"', anchor)
+        self.assertIn('noopener', anchor)
+
+    def test_the_old_local_page_redirects_to_the_campaign(self):
+        """
+        It said "coming soon", which now contradicts the home page's own
+        button. Old shared links land on the campaign instead.
+        """
+        r = self.client.get(reverse('pages:kickstarter'))
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r['Location'], self.URL)
+
+    def test_the_redirect_is_temporary(self):
+        """
+        A campaign ends. A 301 would sit in people's browser caches long
+        after there was anywhere to send them.
+        """
+        self.assertEqual(self.client.get('/kickstarter/index.html').status_code, 301)
+        self.assertEqual(self.client.get(reverse('pages:kickstarter')).status_code, 302)

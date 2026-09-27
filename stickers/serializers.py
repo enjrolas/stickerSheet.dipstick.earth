@@ -73,13 +73,39 @@ class StickerSubmitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sticker
+        # The framing fields are here so an app can send the crop someone
+        # chose on the phone. `status` is deliberately NOT here: nothing in a
+        # request body can ask to be published, whoever sent it.
         fields = ('species_name', 'media', 'caption', 'wildlife_investigator',
-                  'location', 'captured_at', 'submitter_email')
+                  'location', 'captured_at', 'submitter_email',
+                  'shape', 'focal_x', 'focal_y', 'zoom')
 
     def validate_media(self, value):
         from .forms import validate_upload
         validate_upload(value)
         return value
+
+    def validate_shape(self, value):
+        from . import shapes
+        value = (value or '').strip()
+        if value and value not in [slug for slug, _ in shapes.available()]:
+            raise serializers.ValidationError('Not one of the sticker shapes.')
+        return value
+
+    def validate_zoom(self, value):
+        from . import imaging
+        if value is None:
+            return 1.0
+        return min(max(float(value), imaging.MIN_ZOOM), imaging.MAX_ZOOM)
+
+    def _unit(self, value):
+        return 0.5 if value is None else min(max(float(value), 0.0), 1.0)
+
+    def validate_focal_x(self, value):
+        return self._unit(value)
+
+    def validate_focal_y(self, value):
+        return self._unit(value)
 
     def create(self, validated_data):
         name = validated_data.pop('species_name').strip()

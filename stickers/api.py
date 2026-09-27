@@ -8,10 +8,14 @@ made in the admin.
 
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
+from rest_framework.authtoken.models import Token
+from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
 
 from django.templatetags.static import static
 
@@ -143,18 +147,77 @@ class SpeciesViewSet(mixins.ListModelMixin,
                 .order_by('common_name'))
 
 
+class TokenView(APIView):
+    """
+    POST /api/auth/token/ — {"username": ..., "password": ...}
+
+    Returns a long-lived token for a phone app to send as
+
+        Authorization: Token <key>
+
+    on later requests. One token per user; asking again returns the same one,
+    so an app that loses it can simply ask again rather than accumulating
+    credentials. Deleting the row (admin, or POST /api/auth/token/revoke/)
+    signs every device out at once.
+
+    Throttled hard: this is the one endpoint where a password is guessable,
+    and unlike the submit form there is no honeypot to slow anyone down.
+    """
+
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'token'
+
+    def post(self, request):
+        serializer = AuthTokenSerializer(data=request.data,
+                                         context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'username': user.get_username(),
+            # The app can show "your stickers go straight up" rather than
+            # promising a review that will not happen, or vice versa.
+            'publishes_immediately': bool(user.is_staff),
+        })
+
+
+class RevokeTokenView(APIView):
+    """POST /api/auth/token/revoke/ — drop the caller's token."""
+
+    def post(self, request):
+        Token.objects.filter(user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class SubmitViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     """
-    POST /api/submit/ — multipart. Open, throttled, always lands PENDING.
+    POST /api/submit/ — multipart or JSON. Open to anyone.
+
+    Anonymous posts land PENDING and wait for review, exactly like the web
+    form. A request carrying the token of a staff user is published straight
+    away — the same rule the website applies to a logged-in staff session,
+    so there is one answer to "who can skip the queue" rather than two.
 
     Fields: species_name, media, caption, wildlife_investigator, location,
-            captured_at, submitter_email
+            captured_at, submitter_email, shape, focal_x, focal_y, zoom
     """
 
     serializer_class = StickerSubmitSerializer
     permission_classes = [AllowAny]
     throttle_scope = 'submit'
     queryset = Sticker.objects.none()
+
+    def get_throttles(self):
+        """
+        The rate limit is a spam control for strangers. Someone who has
+        authenticated is known, and a field trip uploading a morning's
+        footage should not hit a wall at twelve.
+        """
+        if self.request.user.is_authenticated:
+            return []
+        return super().get_throttles()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

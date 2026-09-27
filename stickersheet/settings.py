@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'stickers',
     'pages',
@@ -59,6 +60,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'pages.context_processors.analytics',
             ],
         },
     },
@@ -137,6 +139,16 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o775
 FILE_UPLOAD_PERMISSIONS = 0o664
 
 REST_FRAMEWORK = {
+    # Token for apps, session for the website. Both populate request.user, so
+    # the "staff skip the queue" rule in SubmitViewSet works either way
+    # without knowing which one was used.
+    #
+    # SessionAuthentication enforces CSRF; TokenAuthentication does not and
+    # does not need to, since a token is not sent automatically by a browser.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
@@ -148,7 +160,11 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         # Open submission endpoint. Generous enough for a workshop full of
         # people on one venue NAT, tight enough to make scripted spam boring.
+        # Only applies to anonymous posters — see SubmitViewSet.get_throttles.
         'submit': '12/hour',
+        # Password attempts. A token endpoint is a brute-force target, and
+        # unlike the submit form there is no honeypot to slow anyone down.
+        'token': '10/hour',
     },
 }
 
@@ -176,6 +192,11 @@ STICKER_PNG_SIZE = 1024       # die-cut PNG, square, transparent
 STICKER_THUMB_WIDTH = 640     # grid thumbnail
 STICKER_LOWRES_WIDTH = 32     # LQIP placeholder
 STICKER_BORDER_RATIO = 0.055  # vinyl border as a fraction of the sticker size
+
+# Google Analytics 4 measurement ID. Not a secret — it is in the page source
+# of every site that uses one — so it belongs here rather than in
+# local_settings.py. Empty disables the tag entirely.
+GOOGLE_ANALYTICS_ID = 'G-M8S15NMTH5'
 
 # Nominatim asks for a contactable UA on every request.
 GEOCODER_USER_AGENT = 'stickerSheet.dipstick.earth (alex@alexhornstein.com)'
